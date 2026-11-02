@@ -756,9 +756,18 @@ function openNight(iso,el){
 
 /* ---------- people: initials and role codes used on the calendar ---------- */
 const KINDS=[["leader","Leaders"],["yw","Young Women"],["ym","Young Men"]];
-function whoIs(text){
+/** Who the initials in "Planning it" mean. When initials are shared, the activity narrows it down:
+ *  Young Men vs Young Women youth by its group, then the ward from a ward group or the night's responsible ward. */
+function whoIs(text,a){
   const codes=String(text||"").toUpperCase().match(/[A-Z][A-Z0-9]{1,4}/g)||[];
-  const out=[...new Set(codes)].map(c=>{const m=state.people.filter(p=>String(p.code).toUpperCase()===c||String(p.initials||"").toUpperCase()===c);
+  const side=a&&sideOf(a.group);
+  const wm=a&&String(a.group||"").match(/young women (S+)$/i);
+  const ward=wm&&wardNames().includes(wm[1])?wm[1]:a&&a.date&&state.nights[a.date]&&wardNames().includes(state.nights[a.date].r)?state.nights[a.date].r:"";
+  const narrow=(m,keep)=>{const n=m.filter(keep);return n.length?n:m;};
+  const out=[...new Set(codes)].map(c=>{let m=state.people.filter(p=>String(p.code).toUpperCase()===c||String(p.initials||"").toUpperCase()===c);
+    if(m.length>1&&side)m=narrow(m,p=>p.kind==="leader"||p.kind===(side==="q"?"ym":"yw"));
+    if(m.length>1&&m.some(p=>p.kind!=="leader"))m=narrow(m,p=>p.kind!=="leader");
+    if(m.length>1&&ward&&setupOf()==="dual")m=narrow(m,p=>p.ward===ward);
     return m.length?`<b>${esc(c)}</b> ${m.map(p=>esc(p.name)+(p.ward&&setupOf()==="dual"?" ("+esc(p.ward)+")":"")).join(" or ")}`:"";}).filter(Boolean);
   return out.length?`<span class="whois">${out.join(" · ")}</span>`:"";
 }
@@ -964,7 +973,7 @@ function drawEditor(){
     ${linksField(e)}
     <div class="field"><label for="fLoc">Where</label><input id="fLoc" maxlength="120" value="${esc(a.location||"")}"></div>
     <div class="field"><label for="fBudget">Budget (£)</label><input id="fBudget" inputmode="decimal" maxlength="12" value="${esc(a.budget||"")}"></div>
-    <div class="field"><label for="fPlan">Planning it</label><input id="fPlan" maxlength="120" value="${esc(a.planning||"")}" placeholder="e.g. SH / AP or Sam B"><span class="hint">Initials or codes from People, or first names.</span>${whoIs(a.planning)}</div>
+    <div class="field"><label for="fPlan">Planning it</label><input id="fPlan" maxlength="120" value="${esc(a.planning||"")}" placeholder="e.g. SH / AP or Sam B"><span class="hint">Initials or codes from People, or first names.</span>${whoIs(a.planning,a)}</div>
     <div class="field"><label for="fAdults">Adults responsible</label><input id="fAdults" maxlength="120" value="${esc(a.adults||"")}" placeholder="e.g. Jane W, Hayden D"><span class="hint">At least two adults. First names and initials only.</span></div>
     <div class="field wide"><span class="lbl">Checklist</span><div class="checks">${e.checks.map((c,i)=>`<label><input type="checkbox" data-check="${i}"${c.d?" checked":""}>${esc(c.t)}<button class="x" type="button" data-act="del-check" data-i="${i}" aria-label="Remove ${esc(c.t)}">×</button></label>`).join("")}</div>
       <div class="addcheck"><input id="newCheck" maxlength="60" placeholder="Add a checklist item" aria-label="New checklist item"><button class="btn" type="button" data-act="add-check">Add</button></div></div>
