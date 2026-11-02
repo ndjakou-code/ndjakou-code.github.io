@@ -145,6 +145,9 @@ td.emp.over{outline:2px dashed var(--accent)!important;outline-offset:-4px;backg
 #setupSel{font:inherit;padding:6px 8px;border:1px solid var(--line-2);border-radius:6px;background:var(--surface);color:var(--ink)}
 .dualnames{display:flex;gap:10px;margin-top:8px}.dualnames label{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--muted);flex:1}
 .dualnames input{font:inherit;padding:6px 8px;border:1px solid var(--line-2);border-radius:6px;background:var(--surface);color:var(--ink)}
+.colours{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.colours label{display:flex;align-items:center;gap:8px;font-size:14px;border:1px solid var(--line-2);border-radius:8px;padding:6px 8px}
+.colours input[type=color]{width:38px;height:28px;border:0;padding:0;background:none;cursor:pointer}
 .whois{font-size:12.5px;color:var(--muted);margin-top:3px}
 .cal tr.mrow td{font:700 15px var(--display);color:var(--ink);background:var(--bg);padding:12px 8px 6px;border-bottom:1px solid var(--line-2)}
 .cal tr.today .dcol{color:var(--accent)}
@@ -355,6 +358,12 @@ body.ro .emp button,body.ro #ideaForm,body.ro [data-act="starter"],body.ro [data
         </div>
         <div class="formbtns" style="margin-top:8px"><button class="btn" type="button" data-act="save-setup">Save setup</button></div>
       </div>
+      <div id="colourSec">
+        <h3 class="eyebrow">Area colours</h3>
+        <p class="muted">Used for the bars, pills and filters. Everyone in your ward sees the same colours.</p>
+        <div class="colours" id="colourPick"></div>
+        <div class="formbtns" style="margin-top:8px"><button class="btn" type="button" data-act="reset-colours">Use the standard colours</button><button class="btn" type="button" data-act="save-colours">Save colours</button></div>
+      </div>
       <div id="groupsSec">
         <h3 class="eyebrow">Groups</h3>
         <p class="muted">One per line, as you want them to appear (classes, quorums, combined).</p>
@@ -421,6 +430,13 @@ body.ro .emp button,body.ro #ideaForm,body.ro [data-act="starter"],body.ro [data
 "use strict";
 const API_URL="https://script.google.com/macros/s/AKfycbwbA2bR6g7JAVCO1kFqw9joZgVkxZi6LrkogyLthFs0PvPUfoiVp_dow63pAYCfN3nYDQ/exec";
 const AREAS=[["spiritual","Spiritual"],["social","Social"],["physical","Physical"],["intellectual","Intellectual"]];
+/** The ward's own area colours (meta.colours), applied over the standard light/dark ones. */
+function applyColours(){
+  const c=(state.meta&&state.meta.colours)||{};
+  for(const[a]of AREAS){if(/^#[0-9a-f]{6}$/i.test(c[a]||""))document.documentElement.style.setProperty("--a-"+a,c[a]);else document.documentElement.style.removeProperty("--a-"+a);}
+}
+const areaColour=a=>{const v=getComputedStyle(document.documentElement).getPropertyValue("--a-"+a).trim();return /^#[0-9a-f]{6}$/i.test(v)?v:"#888888";};
+function drawColourPick(){$("#colourPick").innerHTML=AREAS.map(([a,l])=>`<label><input type="color" data-colour="${a}" value="${areaColour(a)}">${l}</label>`).join("");}
 const STATUSES=[["idea","Idea"],["planned","Planned"],["confirmed","Confirmed"],["done","Done"],["cancelled","Cancelled"]];
 const DEFAULT_GROUPS=["All quorums","Deacons quorum","Teachers quorum","Priests quorum","All Young Women","Builders of Faith","Messengers of Hope","Gatherers of Light","Combined youth"];
 // Young Women age groups (First Presidency, April 2026): turning 12–13, 14–15, 16 and older
@@ -580,6 +596,7 @@ document.addEventListener("visibilitychange",poll);
 /* ---------- render ---------- */
 function render(){
   document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.view===state.view)));
+  applyColours();
   $("#areaBar").innerHTML=AREAS.map(([a,l])=>`<button class="abtn a-${a}" type="button" data-act="filter-area" data-area="${a}" aria-pressed="${state.areas.has(a)}">${l}</button>`).join("");
   document.body.classList.toggle("ro",!!state.readOnly);
   $("#newBtn").hidden=!!state.readOnly;$("#pinBtn").hidden=!state.readOnly||!state.ready;
@@ -807,6 +824,7 @@ function renderPeople(){
 }
 let peopleTimer=0;
 function savePeople(){clearTimeout(peopleTimer);peopleTimer=setTimeout(()=>put("meta","people",{list:state.people}),600);}
+document.addEventListener("input",e=>{if(e.target.dataset&&e.target.dataset.colour){document.documentElement.style.setProperty("--a-"+e.target.dataset.colour,e.target.value);return;}});
 document.addEventListener("input",e=>{const t=e.target;if(!t.dataset||t.dataset.pi===undefined)return;
   const p=state.people[+t.dataset.pi];if(!p)return;p[t.dataset.pf]=/^(code|initials)$/.test(t.dataset.pf)?t.value.trim().toUpperCase():t.value;
   clearTimeout(peopleTimer);peopleTimer=setTimeout(()=>{pending.push({col:"meta",id:"people",body:{list:state.people}});clearTimeout(flushTimer);flushTimer=setTimeout(flush,250);},600);});
@@ -1083,9 +1101,12 @@ document.addEventListener("click",e=>{
       if(!b.classList.contains("armed")){b.classList.add("armed");b.textContent="Confirm";setTimeout(()=>{if(b.isConnected){b.classList.remove("armed");b.textContent="Remove";}},3500);return;}
       put("ideas",b.dataset.id,null);return;}
     case"starter":STARTER_IDEAS.forEach(([title,areas])=>put("activities",newId(),unplanned(title,areas,"",[])));toast(STARTER_IDEAS.length+" ideas added.");return;
-    case"settings":$("#setupSel").value=setupOf();$("#ward1").value=wardNames()[0];$("#ward2").value=wardNames()[1];$("#dualNames").hidden=setupOf()!=="dual";["setupSec","groupsSec","pinForm","histSec","forgetSec"].forEach(x=>$("#"+x).hidden=!!state.readOnly);$("#roSec").hidden=!state.readOnly;$("#wardLink").value=wardLink();$("#groupsText").value=groups().join("\n");$("#setModal").hidden=false;return;
+    case"settings":drawColourPick();$("#colourSec").hidden=!!state.readOnly;$("#setupSel").value=setupOf();$("#ward1").value=wardNames()[0];$("#ward2").value=wardNames()[1];$("#dualNames").hidden=setupOf()!=="dual";["setupSec","groupsSec","pinForm","histSec","forgetSec"].forEach(x=>$("#"+x).hidden=!!state.readOnly);$("#roSec").hidden=!state.readOnly;$("#wardLink").value=wardLink();$("#groupsText").value=groups().join("\n");$("#setModal").hidden=false;return;
     case"close-settings":$("#setModal").hidden=true;return;
     case"copy-link":copyText(wardLink(),$("#wardLink"));return;
+    case"save-colours":{const c={};document.querySelectorAll("[data-colour]").forEach(i=>c[i.dataset.colour]=i.value);
+      state.meta={...state.meta,colours:c};put("meta","ward",{...state.meta});toast("Colours saved.");return;}
+    case"reset-colours":{const m={...state.meta};delete m.colours;state.meta=m;put("meta","ward",{...m});applyColours();drawColourPick();toast("Standard colours back.");return;}
     case"save-setup":{const v=$("#setupSel").value,w=[$("#ward1").value.trim()||"Ward 1",$("#ward2").value.trim()||"Ward 2"];
       const g=v==="dual"?dualGroups(w):DEFAULT_GROUPS.slice(),cur=groups();
       const same=g.length===cur.length&&g.every((x,i)=>x===cur[i]);
