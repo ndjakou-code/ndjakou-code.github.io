@@ -1102,7 +1102,7 @@ document.addEventListener("click",e=>{
       put("ideas",b.dataset.id,null);return;}
     case"starter":STARTER_IDEAS.forEach(([title,areas])=>put("activities",newId(),unplanned(title,areas,"",[])));toast(STARTER_IDEAS.length+" ideas added.");return;
     case"settings":drawColourPick();$("#colourSec").hidden=!!state.readOnly;$("#setupSel").value=setupOf();$("#ward1").value=wardNames()[0];$("#ward2").value=wardNames()[1];$("#dualNames").hidden=setupOf()!=="dual";["setupSec","groupsSec","pinForm","histSec","forgetSec"].forEach(x=>$("#"+x).hidden=!!state.readOnly);$("#roSec").hidden=!state.readOnly;$("#wardLink").value=wardLink();$("#groupsText").value=groups().join("\n");$("#setModal").hidden=false;return;
-    case"close-settings":$("#setModal").hidden=true;return;
+    case"close-settings":$("#setModal").hidden=true;applyColours();return;
     case"copy-link":copyText(wardLink(),$("#wardLink"));return;
     case"save-colours":{const c={};document.querySelectorAll("[data-colour]").forEach(i=>c[i.dataset.colour]=i.value);
       state.meta={...state.meta,colours:c};put("meta","ward",{...state.meta});toast("Colours saved.");return;}
@@ -1127,7 +1127,7 @@ document.addEventListener("change",e=>{
   else if(t.dataset&&t.dataset.check!==undefined&&state.editing){state.editing.checks[+t.dataset.check].d=t.checked;}
 });
 document.addEventListener("keydown",e=>{
-  if(e.key==="Escape"){if(!$("#editModal").hidden)closeEditor();else if(!$("#setModal").hidden)$("#setModal").hidden=true;}
+  if(e.key==="Escape"){if(!$("#editModal").hidden)closeEditor();else if(!$("#setModal").hidden){$("#setModal").hidden=true;applyColours();}}
   if(e.key==="Enter"&&e.target.id==="newCheck"){e.preventDefault();b=document.querySelector('[data-act="add-check"]');if(b)b.click();}
   if(e.key==="Enter"&&e.target.id==="newLink"){e.preventDefault();b=document.querySelector('[data-act="add-link"]');if(b)b.click();}
 });
