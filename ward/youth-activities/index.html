@@ -77,6 +77,9 @@ main{max-width:980px;margin:0 auto;padding-top:16px;display:flex;flex-direction:
 
 /* filters */
 .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.flabel{font-size:12px;color:var(--muted);font-weight:600}
+.narrow{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:8px 12px;border:1px solid var(--accent);border-left:4px solid var(--accent);border-radius:0 8px 8px 0;background:color-mix(in srgb,var(--accent) 8%,var(--surface));font-size:14px}
+.narrow b{font-weight:700}.narrow .btn{margin-left:auto}
 .filters select,.field select,.field input,.field textarea{border:1px solid var(--line-2);border-radius:8px;background:var(--surface);padding:7px 9px}
 .chip{border:1px solid var(--line-2);background:var(--surface);border-radius:999px;padding:4px 11px 4px 9px;font-size:13px;font-weight:600;color:var(--ink-2);display:inline-flex;align-items:center;gap:6px}
 .chip .dot{width:9px;height:9px;border-radius:50%;flex:none}
@@ -808,6 +811,17 @@ document.addEventListener("input",e=>{const t=e.target;if(!t.dataset||t.dataset.
   const p=state.people[+t.dataset.pi];if(!p)return;p[t.dataset.pf]=/^(code|initials)$/.test(t.dataset.pf)?t.value.trim().toUpperCase():t.value;
   clearTimeout(peopleTimer);peopleTimer=setTimeout(()=>{pending.push({col:"meta",id:"people",body:{list:state.people}});clearTimeout(flushTimer);flushTimer=setTimeout(flush,250);},600);});
 
+/** A clear way back to everything when the calendar is filtered. */
+function narrowNote(){
+  const bits=[];
+  if(state.group)bits.push(sentence(groupLabel(state.group)));
+  if(state.hide.has("q"))bits.push("Young Women only");
+  if(state.hide.has("yw"))bits.push("Quorums only");
+  if(state.areas.size)bits.push(AREAS.filter(([a])=>state.areas.has(a)).map(([,l])=>l).join(" or "));
+  if(state.when==="upcoming")bits.push("upcoming dates");
+  if(state.when==="past")bits.push("past dates");
+  return bits.length?`<div class="narrow" role="status"><span>Showing only <b>${bits.map(esc).join("</b> · <b>")}</b></span><button class="btn" type="button" data-act="show-all">Show everything</button></div>`:"";
+}
 function renderCalendar(){
   const today=todayIso();
   let list=sortedActivities().filter(([,a])=>{
@@ -825,11 +839,12 @@ function renderCalendar(){
   let h=`<div class="filters">
     <select id="fGroup" aria-label="Group">${groupOptions(state.group,"All groups")}</select>
     <select id="fWhen" aria-label="When"><option value="upcoming"${state.when==="upcoming"?" selected":""}>Upcoming (${nUp})</option><option value="past"${state.when==="past"?" selected":""}>Past (${nPast})</option><option value="all"${state.when==="all"?" selected":""}>All dates (${nUp+nPast})</option></select>
-    ${setupOf()==="dual"?`<div class="lay sides" role="group" aria-label="Young Women columns">${[["ward","YW by ward"],["age","YW by age group"]].map(([k,n])=>`<button type="button" data-act="break" data-side="yw" data-k="${k}" aria-pressed="${state.breakYW===k}">${n}</button>`).join("")}</div>
+    ${setupOf()==="dual"?`<span class="flabel">Columns</span><div class="lay sides" role="group" aria-label="Young Women columns">${[["ward","YW by ward"],["age","YW by age group"]].map(([k,n])=>`<button type="button" data-act="break" data-side="yw" data-k="${k}" aria-pressed="${state.breakYW===k}">${n}</button>`).join("")}</div>
     <div class="lay sides" role="group" aria-label="Young Men columns">${[["quorum","YM by quorum"],["ward","YM by ward"]].map(([k,n])=>`<button type="button" data-act="break" data-side="q" data-k="${k}" aria-pressed="${state.breakQ===k}">${n}</button>`).join("")}</div>`:""}
     <div class="lay sides" role="group" aria-label="Show or hide">${[["q","Quorums"],["yw","Young Women"]].map(([k,n])=>`<button type="button" data-act="side" data-side="${k}" aria-pressed="${!state.hide.has(k)}">${n}</button>`).join("")}</div>
     <div class="lay" role="group" aria-label="Layout"><button type="button" data-act="layout" data-layout="grid" aria-pressed="${state.layout==="grid"}">Grid</button><button type="button" data-act="layout" data-layout="list" aria-pressed="${state.layout!=="grid"}">List</button></div>
   </div>`;
+  h+=narrowNote();
   if(!dated.length){
     return h+`<div class="panel empty"><h2>Nothing on the calendar yet</h2><p>Give an idea a date to plan it, or add a new activity.</p><button class="btn primary" type="button" data-act="new">+ New activity</button> <button class="btn" type="button" data-act="view" data-view="ideas">Browse ideas</button></div>`;
   }
@@ -1028,6 +1043,7 @@ document.addEventListener("click",e=>{
       if(!b.classList.contains("armed")){b.classList.add("armed");const t=b.textContent;b.textContent="Confirm";setTimeout(()=>{if(b.isConnected){b.classList.remove("armed");b.textContent=t;}},3500);return;}
       undo(+b.dataset.n,act==="undo-from"?"from":"one");return;}
     case"show-past":state.when="past";render();return;
+    case"show-all":state.group="";state.areas.clear();state.hide.clear();state.when="all";try{localStorage.setItem("youth-activities-hide","[]");}catch(err){}render();return;
     case"break":{const k=b.dataset.k;if(b.dataset.side==="q"){state.breakQ=k;try{localStorage.setItem("youth-activities-breakq",k);}catch(err){}}
       else{state.breakYW=k;try{localStorage.setItem("youth-activities-breakyw",k);}catch(err){}}render();return;}
     case"side":{const k=b.dataset.side,o=k==="q"?"yw":"q";
