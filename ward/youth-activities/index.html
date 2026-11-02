@@ -727,13 +727,15 @@ function lifeOf(a){
   return["planned","Planned "+fmtShort(a.date)];
 }
 const linkMeta=a=>{const L=linksOf(a);return L.length===1?` · <a href="${esc(L[0])}" target="_blank" rel="noopener">Link</a>`:L.length?` · ${L.length} links`:"";};
+/** Unplanned bank copies of an FSY idea (planned or done ones stay put). */
+const unplannedCopies=url=>[...state.activities.entries()].filter(([,a])=>!a.date&&linksOf(a).includes(url)).map(([id])=>id);
 function fsySection(){
   const have=new Set([...state.activities.values()].flatMap(a=>linksOf(a)));
   const list=FSY_IDEAS.map((i,n)=>[i,n]).filter(([i])=>!state.areas.size||i.areas.some(x=>state.areas.has(x)));
   if(!list.length)return "";
   return `<section><h2 class="ihead">From For the Strength of Youth</h2>
     <div class="ideagrid">${list.map(([i,n])=>ideaBlock(i,(areaPills(i)||"No area yet · ")+esc(i.issue)+` · <a href="${esc(i.url)}" target="_blank" rel="noopener">Article</a>`,
-      `<button class="mini" type="button" data-act="plan-fsy" data-i="${n}">Plan</button>${have.has(i.url)?`<span class="inbank">In bank</span>`:`<button class="mini" type="button" data-act="add-fsy" data-i="${n}">Add</button>`}`)).join("")}</div></section>`;
+      `<button class="mini" type="button" data-act="plan-fsy" data-i="${n}">Plan</button>${unplannedCopies(i.url).length?`<button class="mini" type="button" data-act="remove-fsy" data-i="${n}">Remove</button>`:have.has(i.url)?`<span class="inbank">Planned</span>`:`<button class="mini" type="button" data-act="add-fsy" data-i="${n}">Add</button>`}`)).join("")}</div></section>`;
 }
 const BANK_FILTERS=[["all","All"],["unplanned","Unplanned"],["planned","Planned"],["done","Done"]];
 function renderIdeas(){
@@ -874,6 +876,7 @@ document.addEventListener("click",e=>{
     case"save-idea":{readEditor();const a=state.editing.a;put("ideas",newId(),{title:a.title,areas:a.areas,notes:a.notes||"",links:a.links||[],created:Date.now()});toast("Saved to the ideas bank.");return;}
     case"plan-idea":{const i=state.ideas.get(b.dataset.id);if(i)openEditor(null,{title:i.title,areas:[...(i.areas||[])],notes:i.notes||"",links:linksOf(i),status:"idea"});return;}
     case"plan-fsy":{const i=FSY_IDEAS[+b.dataset.i];if(i)openEditor(null,{title:i.title,areas:[...i.areas],notes:i.notes,links:[i.url],status:"idea"});return;}
+    case"remove-fsy":{const i=FSY_IDEAS[+b.dataset.i];if(i){unplannedCopies(i.url).forEach(id=>put("activities",id,null));toast("Removed from your ideas bank.");}return;}
     case"add-fsy":{const i=FSY_IDEAS[+b.dataset.i];if(i){put("activities",newId(),unplanned(i.title,i.areas,i.notes,[i.url]));toast("Added to your ideas bank.");}return;}
     case"del-idea":{
       if(!b.classList.contains("armed")){b.classList.add("armed");b.textContent="Confirm";setTimeout(()=>{if(b.isConnected){b.classList.remove("armed");b.textContent="Remove";}},3500);return;}
