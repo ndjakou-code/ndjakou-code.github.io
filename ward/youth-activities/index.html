@@ -645,7 +645,8 @@ function areaChips(sel,act){
   return AREAS.map(([a,l])=>`<button class="chip" type="button" data-act="${act}" data-area="${a}" aria-pressed="${sel.has(a)}"><span class="dot ${a}"></span>${l}</button>`).join("");
 }
 const partsOf=g=>String(g||"").split(" + ").filter(Boolean);
-const sentence=t=>(t.charAt(0).toUpperCase()+t.slice(1).toLowerCase()).replace(/\bquorum(s?)\b/g,"Quorum$1");
+// sentence case, but codes like CM1 stay as written and Quorum keeps its capital
+const sentence=t=>String(t).split(" ").map((w,i)=>/^[A-Z0-9]{2,}$/.test(w)?w:i?w.toLowerCase():w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(" ").replace(/\bquorum(s?)\b/g,"Quorum$1");
 /** Display name; joined groups read "Deacons & Teachers quorums". */
 function groupLabel(g){
   const p=partsOf(g);if(p.length<2)return g||"";
