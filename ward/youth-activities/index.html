@@ -94,6 +94,7 @@ main{max-width:980px;margin:0 auto;padding-top:16px;display:flex;flex-direction:
 .lay button{border:0;background:none;padding:6px 12px;font-size:13px;font-weight:600;color:var(--ink-2)}
 .lay button+button{border-left:1px solid var(--line)}
 .lay button[aria-pressed="true"]{background:var(--ink-2);color:var(--surface)}
+.lay.sides{margin-left:0}
 .gridwrap{overflow-x:auto;padding:0}
 .cal{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;min-width:520px;font-size:13px}
 .cal th,.cal td{border-bottom:1px solid var(--line);padding:4px;vertical-align:top}
@@ -379,7 +380,10 @@ body.ro .emp button,body.ro #ideaForm,body.ro [data-act="starter"],body.ro [data
 const API_URL="https://script.google.com/macros/s/AKfycbwbA2bR6g7JAVCO1kFqw9joZgVkxZi6LrkogyLthFs0PvPUfoiVp_dow63pAYCfN3nYDQ/exec";
 const AREAS=[["spiritual","Spiritual"],["social","Social"],["physical","Physical"],["intellectual","Intellectual"]];
 const STATUSES=[["idea","Idea"],["planned","Planned"],["confirmed","Confirmed"],["done","Done"],["cancelled","Cancelled"]];
-const DEFAULT_GROUPS=["All quorums","Deacons quorum","Teachers quorum","Priests quorum","Young Women","Combined youth"];
+const DEFAULT_GROUPS=["All quorums","Deacons quorum","Teachers quorum","Priests quorum","All Young Women","Young Women 11–12","Young Women 13–14","Young Women 15–18","Combined youth"];
+const YW_CLASSES=["Young Women 11–12","Young Women 13–14","Young Women 15–18"];
+/** Quorums ("q") or Young Women ("yw") side of a group; null for combined youth. */
+const sideOf=g=>/quorum/i.test(g||"")?"q":/young women|class/i.test(g||"")?"yw":null;
 const DEFAULT_CHECKS=["Two adults confirmed","Bishopric informed","Permission forms","Transport","Food","Equipment","Budget approved"];
 // Starter ideas for the ideas bank (added only when someone asks for them).
 const STARTER_IDEAS=[
@@ -406,7 +410,7 @@ const FSY_IDEAS=[
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const state={activities:new Map(),ideas:new Map(),meta:{},ready:false,view:"calendar",group:"",when:"all",areas:new Set(),period:"term",bank:"all",editing:null,layout:(()=>{try{return localStorage.getItem("youth-activities-layout")||"grid";}catch(e){return "grid";}})()};
+const state={hide:(()=>{try{return new Set(JSON.parse(localStorage.getItem("youth-activities-hide")||"[]"));}catch(e){return new Set();}})(),activities:new Map(),ideas:new Map(),meta:{},ready:false,view:"calendar",group:"",when:"all",areas:new Set(),period:"term",bank:"all",editing:null,layout:(()=>{try{return localStorage.getItem("youth-activities-layout")||"grid";}catch(e){return "grid";}})()};
 let ward=null,pin=null,owner=null,rev=0,pending=[],flushing=false,flushTimer=0,loading=false;
 const PIN_KEY="youth-activities-pin",WARD_KEY="youth-activities-ward";
 
@@ -453,6 +457,15 @@ function apiFailed(err){
 }
 /** Ideas used to be a separate list; each becomes an activity with no date. */
 const unplanned=(title,areas,notes,links)=>({title,date:"",group:groups()[0],areas:areas||[],status:"idea",location:"",planning:"",adults:"",budget:"",notes:notes||"",links:links||[],checks:[],created:Date.now(),updated:Date.now()});
+function addYoungWomenClasses(){
+  const g=state.meta.groups;
+  if(g&&g.length&&g.includes("Young Women")&&!g.some(x=>YW_CLASSES.includes(x))){
+    const i=g.indexOf("Young Women");
+    state.meta={...state.meta,groups:[...g.slice(0,i),"All Young Women",...YW_CLASSES,...g.slice(i+1)]};
+    put("meta","ward",{...state.meta});
+  }
+  for(const[id,a]of state.activities)if(a.group==="Young Women")put("activities",id,{...a,group:"All Young Women",updated:Date.now()});
+}
 function moveIdeasToActivities(){
   if(!state.ideas.size)return;
   for(const[id,i]of[...state.ideas]){
@@ -471,7 +484,7 @@ async function loadAll(){
     state.meta=(all.meta&&all.meta.ward)||{};
     rev=all.rev||0;state.ready=true;
     render();
-    if(!state.readOnly)moveIdeasToActivities();
+    if(!state.readOnly){moveIdeasToActivities();addYoungWomenClasses();}
   }finally{loading=false;}
 }
 function put(col,id,body){
@@ -521,16 +534,17 @@ function sortedActivities(){return [...state.activities.entries()].sort((a,b)=>(
 /* ---------- calendar grid ----------
  * Umbrella groups ("All quorums", "Combined youth", "All … classes") are not columns; their
  * activities span the columns they cover. Any other group is a column of its own. */
-const isUmbrella=g=>/^(all\b|combined\b)/i.test(String(g||"").trim());
+const isUmbrella=g=>/^(all\b|combined\b|young women$)/i.test(String(g||"").trim());
 function umbrellaCovers(g,col){
   const n=String(g||"").toLowerCase();
   if(/^combined/.test(n))return true;
+  if(n==="young women")return /class|young women/i.test(col);
   if(/^all\b.*quorum/.test(n))return /quorum/i.test(col);
   if(/^all\b.*(class|young women)/.test(n))return /class|young women/i.test(col);
   return /^all\b/.test(n);
 }
 function gridColumns(){
-  let cols=groups().filter(g=>!isUmbrella(g));
+  let cols=groups().filter(g=>!isUmbrella(g)&&!state.hide.has(sideOf(g)));
   if(!cols.length)cols=["Activity"];
   if(state.group){cols=isUmbrella(state.group)?cols.filter(c=>umbrellaCovers(state.group,c)):cols.filter(c=>c===state.group);}
   return cols.length?cols:[state.group];
@@ -582,6 +596,7 @@ function renderCalendar(){
   let list=sortedActivities().filter(([,a])=>{
     if(!a.date)return false;
     if(state.group&&a.group!==state.group)return false;
+    if(state.hide.has(sideOf(a.group)))return false;
     if(state.areas.size&&!(a.areas||[]).some(x=>state.areas.has(x)))return false;
     if(state.when==="upcoming")return a.date>=today;
     if(state.when==="past")return a.date<today;
@@ -593,6 +608,7 @@ function renderCalendar(){
   let h=`<div class="filters">
     <select id="fGroup" aria-label="Group">${groupOptions(state.group,"All groups")}</select>
     <select id="fWhen" aria-label="When"><option value="upcoming"${state.when==="upcoming"?" selected":""}>Upcoming (${nUp})</option><option value="past"${state.when==="past"?" selected":""}>Past (${nPast})</option><option value="all"${state.when==="all"?" selected":""}>All dates (${nUp+nPast})</option></select>
+    <div class="lay sides" role="group" aria-label="Show or hide">${[["q","Quorums"],["yw","Young Women"]].map(([k,n])=>`<button type="button" data-act="side" data-side="${k}" aria-pressed="${!state.hide.has(k)}">${n}</button>`).join("")}</div>
     <div class="lay" role="group" aria-label="Layout"><button type="button" data-act="layout" data-layout="grid" aria-pressed="${state.layout==="grid"}">Grid</button><button type="button" data-act="layout" data-layout="list" aria-pressed="${state.layout!=="grid"}">List</button></div>
   </div>`;
   if(!dated.length){
@@ -786,6 +802,9 @@ document.addEventListener("click",e=>{
       if(!b.classList.contains("armed")){b.classList.add("armed");const t=b.textContent;b.textContent="Confirm";setTimeout(()=>{if(b.isConnected){b.classList.remove("armed");b.textContent=t;}},3500);return;}
       undo(+b.dataset.n,act==="undo-from"?"from":"one");return;}
     case"show-past":state.when="past";render();return;
+    case"side":{const k=b.dataset.side,o=k==="q"?"yw":"q";
+      if(state.hide.has(k))state.hide.delete(k);else{state.hide.add(k);state.hide.delete(o);}   // never hide both
+      try{localStorage.setItem("youth-activities-hide",JSON.stringify([...state.hide]));}catch(err){}render();return;}
     case"layout":state.layout=b.dataset.layout;try{localStorage.setItem("youth-activities-layout",state.layout);}catch(err){}render();return;
     case"new-at":openEditor(null,{date:b.dataset.date,group:b.dataset.group});return;
     case"new":openEditor(null);return;
