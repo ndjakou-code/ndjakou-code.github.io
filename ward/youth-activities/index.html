@@ -231,6 +231,10 @@ main{max-width:980px;margin:0 auto;padding-top:16px;display:flex;flex-direction:
 .ideab.a-physical{background:color-mix(in srgb,var(--a-physical) 9%,var(--surface))}
 .ideab.a-intellectual{background:color-mix(in srgb,var(--a-intellectual) 11%,var(--surface))}
 .life{font-weight:700}
+.pills{display:inline-flex;flex-wrap:wrap;gap:3px;vertical-align:middle}
+.pill{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;line-height:1.5;color:#fff;white-space:nowrap}
+.pill.spiritual{background:var(--a-spiritual)}.pill.social{background:var(--a-social)}.pill.physical{background:var(--a-physical)}.pill.intellectual{background:var(--a-intellectual);color:#1d1600}
+.evm .pills{margin-left:4px}
 .life.l-unplanned{color:var(--ink-2)}.life.l-planned{color:var(--accent)}.life.l-done{color:var(--muted)}.life.l-cancelled{color:var(--bad)}
 .itext{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .inote{font-size:12px;color:var(--ink-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -543,7 +547,7 @@ function evCell(list,colspan){
   const a0=list[0][1],ar=(a0.areas||[])[0];
   return `<td${colspan>1?` colspan="${colspan}"`:""} class="ev${ar?" a-"+ar:""}">${list.map(([id,a])=>{
     const ars=orderedAreas(a);
-    return `<button class="evb st-${esc(a.status||"planned")}" style="--n:${Math.max(1,ars.length)}" type="button" data-act="edit" data-id="${esc(id)}"><span class="evs" aria-hidden="true">${ars.length?ars.map(x=>`<i class="${x}"></i>`).join(""):"<i></i>"}</span><span class="evt">${esc(a.title||"Untitled")}</span><span class="evm">${esc(statusName(a.status||"planned"))}${colspan>1||!cols_.includes(a.group)?" · "+esc(a.group):""}${ars.length?" · "+esc(ars.map(areaName).join(" · ")):""}</span></button>`;}).join("")}</td>`;
+    return `<button class="evb st-${esc(a.status||"planned")}" style="--n:${Math.max(1,ars.length)}" type="button" data-act="edit" data-id="${esc(id)}"><span class="evs" aria-hidden="true">${ars.length?ars.map(x=>`<i class="${x}"></i>`).join(""):"<i></i>"}</span><span class="evt">${esc(a.title||"Untitled")}</span><span class="evm">${esc(statusName(a.status||"planned"))}${colspan>1||!cols_.includes(a.group)?" · "+esc(a.group):""}${areaPills(a)}</span></button>`;}).join("")}</td>`;
 }
 let cols_=[];
 function renderGrid(list,today){
@@ -607,7 +611,7 @@ function renderCalendar(){
       <span class="stripe" aria-hidden="true">${ar.length?ar.map(x=>`<span class="${x}"></span>`).join(""):`<span></span>`}</span>
       <div class="when"><div class="d">${d.getDate()}</div><div class="w">${esc(d.toLocaleDateString(undefined,{weekday:"short"}))}</div></div>
       <div><p class="ctitle">${esc(a.title||"Untitled")}</p>
-        <div class="cmeta">${linksOf(a).length?`<span>${linksOf(a).length} link${linksOf(a).length>1?"s":""}</span>`:""}${a.location?`<span>${esc(a.location)}</span>`:""}${a.planning?`<span>Planning: ${esc(a.planning)}</span>`:""}</div>
+        <div class="cmeta">${areaPills(a)}${linksOf(a).length?`<span>${linksOf(a).length} link${linksOf(a).length>1?"s":""}</span>`:""}${a.location?`<span>${esc(a.location)}</span>`:""}${a.planning?`<span>Planning: ${esc(a.planning)}</span>`:""}</div>
         <div class="ctags"><span class="tag">${esc(a.group||"")}</span>${orderedAreas(a).map(x=>`<span class="tag"><span class="dot ${x}" style="width:8px;height:8px;border-radius:50%;display:inline-block"></span>${areaName(x)}</span>`).join("")}</div>
       </div>
       <div class="cside"><span class="status st-${esc(a.status||"planned")}">${esc(statusName(a.status||"planned"))}</span>${checks.length?`<span class="prog${doneN<checks.length&&a.status!=="done"&&a.status!=="cancelled"?" todo":""}">${doneN}/${checks.length} ready</span>`:""}</div>
@@ -655,6 +659,7 @@ function ideaBlock(i,meta,actions,editId){
     <div class="itext"${editId?` role="button" tabindex="0" data-act="edit" data-id="${esc(editId)}" title="Edit"`:""}><span class="evt">${esc(i.title)}</span><span class="evm">${meta}</span>${i.notes?`<span class="inote">${esc(i.notes)}</span>`:""}</div><div class="iact">${actions}</div></div>`;
 }
 const areaList=i=>orderedAreas(i).map(areaName).join(" · ")||"No area yet";
+const areaPills=i=>{const ars=orderedAreas(i);return ars.length?`<span class="pills">${ars.map(x=>`<span class="pill ${esc(x)}">${esc(areaName(x))}</span>`).join("")}</span>`:"";};
 const fmtShort=iso=>{const d=dateObj(iso);return d.toLocaleDateString(undefined,{day:"numeric",month:"short",...(d.getFullYear()!==new Date().getFullYear()?{year:"numeric"}:{})});};
 /** Where an activity is in its life: unplanned (no date), planned, done or cancelled. */
 function lifeOf(a){
@@ -669,7 +674,7 @@ function fsySection(){
   const list=FSY_IDEAS.map((i,n)=>[i,n]).filter(([i])=>!state.areas.size||i.areas.some(x=>state.areas.has(x)));
   if(!list.length)return "";
   return `<section><h2 class="ihead">From For the Strength of Youth</h2>
-    <div class="ideagrid">${list.map(([i,n])=>ideaBlock(i,esc(areaList(i))+" · "+esc(i.issue)+` · <a href="${esc(i.url)}" target="_blank" rel="noopener">Article</a>`,
+    <div class="ideagrid">${list.map(([i,n])=>ideaBlock(i,(areaPills(i)||"No area yet")+" · "+esc(i.issue)+` · <a href="${esc(i.url)}" target="_blank" rel="noopener">Article</a>`,
       `<button class="mini" type="button" data-act="plan-fsy" data-i="${n}">Plan</button>${have.has(i.url)?`<span class="inbank">In bank</span>`:`<button class="mini" type="button" data-act="add-fsy" data-i="${n}">Add</button>`}`)).join("")}</div></section>`;
 }
 const BANK_FILTERS=[["all","All"],["unplanned","Unplanned"],["planned","Planned"],["done","Done"]];
@@ -685,7 +690,7 @@ function renderIdeas(){
   if(!all.length)return h+`<div class="panel empty"><h2>No ideas yet</h2><p>Start with ${STARTER_IDEAS.length} suggestions across the four areas, then add your own.</p><button class="btn primary" type="button" data-act="starter">Add starter ideas</button></div>`+fsySection();
   if(!list.length)return h+`<div class="panel empty"><p>Nothing matches these filters.</p></div>`+fsySection();
   return h+`<section><div class="ideagrid">${list.map(([id,a])=>{const[k,label]=lifeOf(a);
-    return ideaBlock(a,`<span class="life l-${k}">${esc(label)}</span> · ${esc(areaList(a))}${linkMeta(a)}`,
+    return ideaBlock(a,`<span class="life l-${k}">${esc(label)}</span> ${areaPills(a)||"· No area yet"}${linkMeta(a)}`,
       k==="unplanned"?`<button class="mini" type="button" data-act="edit" data-id="${esc(id)}" data-focus="date">Plan</button>`:`<button class="mini" type="button" data-act="plan-again" data-id="${esc(id)}">Plan again</button>`,id);}).join("")}</div></section>`+fsySection();
 }
 
