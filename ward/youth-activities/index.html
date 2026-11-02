@@ -469,7 +469,7 @@ function applyColours(){
 const areaColour=a=>{const v=getComputedStyle(document.documentElement).getPropertyValue("--a-"+a).trim();return /^#[0-9a-f]{6}$/i.test(v)?v:"#888888";};
 function drawColourPick(){$("#colourPick").innerHTML=AREAS.map(([a,l])=>`<label><input type="color" data-colour="${a}" value="${areaColour(a)}">${l}</label>`).join("");}
 const STATUSES=[["idea","Idea"],["planned","Planned"],["confirmed","Confirmed"],["done","Done"],["cancelled","Cancelled"]];
-const DEFAULT_GROUPS=["All quorums","Deacons quorum","Teachers quorum","Priests quorum","All Young Women","Builders of Faith","Messengers of Hope","Gatherers of Light","Combined youth"];
+const DEFAULT_GROUPS=["All Quorums","Deacons Quorum","Teachers Quorum","Priests Quorum","All Young Women","Builders of Faith","Messengers of Hope","Gatherers of Light","Combined youth"];
 // Young Women age groups (First Presidency, April 2026): turning 12–13, 14–15, 16 and older
 const YW_CLASSES=["Builders of Faith","Messengers of Hope","Gatherers of Light"];
 const OLD_YW={"Young Women 11–12":"Builders of Faith","Young Women 13–14":"Messengers of Hope","Young Women 15–18":"Gatherers of Light"};
@@ -522,7 +522,7 @@ const addMonths=(iso,m)=>{const d=new Date(iso+"T12:00:00");d.setMonth(d.getMont
 const dateObj=iso=>new Date(iso+"T12:00:00");
 const setupOf=()=>state.meta.setup==="dual"?"dual":"single";
 const wardNames=()=>(state.meta.wards&&state.meta.wards.length===2)?state.meta.wards:["Ward 1","Ward 2"];
-const dualGroups=([w1,w2])=>["Combined youth","All Young Women","Young Women "+w1,"Young Women "+w2,...YW_CLASSES,"All quorums","Young Men "+w1,"Young Men "+w2,"Priests quorum","Teachers quorum","Deacons quorum"];
+const dualGroups=([w1,w2])=>["Combined youth","All Young Women","Young Women "+w1,"Young Women "+w2,...YW_CLASSES,"All Quorums","Young Men "+w1,"Young Men "+w2,"Priests Quorum","Teachers Quorum","Deacons Quorum"];
 /** Dual ward: "Young Women CM1" / "Young Men CM2" style groups (one ward's youth together). */
 const isWardGroup=g=>{const m=String(g||"").match(/^young (?:wo)?men (.+)$/i);return !!m&&wardNames().includes(m[1]);};
 const groups=()=>(state.meta.groups&&state.meta.groups.length)?state.meta.groups:DEFAULT_GROUPS;
@@ -575,6 +575,12 @@ function addYoungWomenClasses(){
     if(to)put("activities",id,{...a,group:to,updated:Date.now()});
   }
 }
+const capQ=g=>String(g||"").replace(/\bquorum(s?)\b/g,"Quorum$1");
+function capitaliseQuorums(){
+  const g=state.meta.groups;
+  if(g&&g.some(x=>capQ(x)!==x)){state.meta={...state.meta,groups:g.map(capQ)};put("meta","ward",{...state.meta});}
+  for(const[id,a]of state.activities)if(capQ(a.group)!==a.group)put("activities",id,{...a,group:capQ(a.group)});
+}
 function moveIdeasToActivities(){
   if(!state.ideas.size)return;
   for(const[id,i]of[...state.ideas]){
@@ -595,7 +601,7 @@ async function loadAll(){
     state.nights=(all.meta&&all.meta.nights&&all.meta.nights.map)||{};
     rev=all.rev||0;state.ready=true;
     render();
-    if(!state.readOnly){moveIdeasToActivities();addYoungWomenClasses();}
+    if(!state.readOnly){moveIdeasToActivities();addYoungWomenClasses();capitaliseQuorums();}
   }finally{loading=false;}
 }
 function put(col,id,body){
@@ -639,11 +645,11 @@ function areaChips(sel,act){
   return AREAS.map(([a,l])=>`<button class="chip" type="button" data-act="${act}" data-area="${a}" aria-pressed="${sel.has(a)}"><span class="dot ${a}"></span>${l}</button>`).join("");
 }
 const partsOf=g=>String(g||"").split(" + ").filter(Boolean);
-const sentence=t=>t.charAt(0).toUpperCase()+t.slice(1).toLowerCase();
+const sentence=t=>(t.charAt(0).toUpperCase()+t.slice(1).toLowerCase()).replace(/\bquorum(s?)\b/g,"Quorum$1");
 /** Display name; joined groups read "Deacons & Teachers quorums". */
 function groupLabel(g){
   const p=partsOf(g);if(p.length<2)return g||"";
-  return p.every(x=>/ quorum$/i.test(x))?p.map(x=>x.replace(/ quorum$/i,"")).join(" & ")+" quorums":p.join(" & ");
+  return p.every(x=>/ quorum$/i.test(x))?p.map(x=>x.replace(/ quorum$/i,"")).join(" & ")+" Quorums":p.join(" & ");
 }
 /** Does activity group g include group x (directly, as one of several, or under an umbrella)? */
 const groupHas=(g,x)=>g===x||partsOf(g).includes(x);
@@ -829,7 +835,7 @@ function matchPeople(code,a){
   return m;
 }
 /** "Santiago H": first name and the surname initial taken from their initials. */
-const nameInitial=p=>{const ini=String(p.kind==="leader"?(p.initials||""):(p.initials||p.code||"")).replace(/[^A-Za-z]/g,"");return p.name+(ini.length>1?" "+ini.slice(-1).toUpperCase():"");};
+const nameInitial=p=>{const ini=String(p.initials||(p.kind==="leader"?"":p.code)||"").replace(/[^A-Za-z]/g,"");return p.name+(ini.length>1?" "+ini.slice(-1).toUpperCase():"");};
 const planTokens=t=>String(t||"").split(/\s*[\/,]\s*/).map(x=>x.trim()).filter(Boolean);
 /** Planning shown on events: names where the code is clear, otherwise the code as typed. */
 function plannerNames(a){
@@ -846,14 +852,14 @@ function renderPeople(){
   if(state.peopleEdit&&!state.readOnly){
     return `<div class="panel" style="padding:12px"><div class="filters" style="margin-bottom:8px"><h2 class="ihead" style="margin:0">People</h2>
       <div class="formbtns" style="margin-left:auto"><button class="btn" type="button" data-act="person-add">+ Add person</button><button class="btn primary" type="button" data-act="people-done">Done</button></div></div>
-      <p class="hint" style="margin:0 0 8px;color:var(--muted)">First names only. The code is what goes in brackets on the calendar, e.g. SH or YWP.</p>
-      <table class="ptable"><thead><tr><th>Code</th><th>Initials</th><th>First name</th>${dual?"<th>Ward</th>":""}<th>Group</th><th>Role</th><th></th></tr></thead><tbody>
-      ${P.map((p,i)=>`<tr><td><input data-pf="code" data-pi="${i}" value="${esc(p.code||"")}" maxlength="6" aria-label="Code"></td>
-        <td><input data-pf="initials" data-pi="${i}" value="${esc(p.initials||"")}" maxlength="4" aria-label="Initials"></td>
-        <td><input data-pf="name" data-pi="${i}" value="${esc(p.name||"")}" maxlength="30" aria-label="First name"></td>
-        ${dual?`<td><select data-pf="ward" data-pi="${i}" aria-label="Ward"><option value=""></option>${[...new Set([...wardNames(),p.ward||""])].filter(Boolean).map(w=>`<option${w===p.ward?" selected":""}>${esc(w)}</option>`).join("")}</select></td>`:""}
+      <p class="hint" style="margin:0 0 8px;color:var(--muted)">First names only. Leaders have a role code (e.g. YWP, AP) as well as initials; youth just have initials.</p>
+      <table class="ptable"><thead><tr>${dual?"<th>Ward</th>":""}<th>Group</th><th>Role</th><th>Code</th><th>First name</th><th>Initials</th><th></th></tr></thead><tbody>
+      ${P.map((p,i)=>`<tr>${dual?`<td><select data-pf="ward" data-pi="${i}" aria-label="Ward"><option value=""></option>${[...new Set([...wardNames(),p.ward||""])].filter(Boolean).map(w=>`<option${w===p.ward?" selected":""}>${esc(w)}</option>`).join("")}</select></td>`:""}
         <td><select data-pf="kind" data-pi="${i}" aria-label="Group">${KINDS.map(([k,l])=>`<option value="${k}"${p.kind===k?" selected":""}>${l}</option>`).join("")}</select></td>
         <td><input data-pf="role" data-pi="${i}" value="${esc(p.role||"")}" maxlength="40" aria-label="Role"></td>
+        <td>${p.kind==="leader"?`<input data-pf="code" data-pi="${i}" value="${esc(p.code||"")}" maxlength="6" aria-label="Code">`:""}</td>
+        <td><input data-pf="name" data-pi="${i}" value="${esc(p.name||"")}" maxlength="30" aria-label="First name"></td>
+        <td><input data-pf="initials" data-pi="${i}" value="${esc(p.initials||"")}" maxlength="4" aria-label="Initials"></td>
         <td><button class="mini" type="button" data-act="person-del" data-i="${i}" aria-label="Remove">Remove</button></td></tr>`).join("")}
       </tbody></table></div>`;
   }
@@ -863,12 +869,13 @@ function renderPeople(){
   const order=["YWP","YW1C","YW2C","B1","B2","B1C","B2C","AP","AT","AD"];
   const sortP=(a,b)=>{const i=order.indexOf(a.code),j=order.indexOf(b.code);return (i<0?99:i)-(j<0?99:j)||String(a.name).localeCompare(b.name);};
   return `<div class="filters"><h2 class="ihead" style="margin:0">People</h2>${state.readOnly?"":`<button class="btn" type="button" data-act="people-edit" style="margin-left:auto">Edit people</button>`}</div>
-    ${P.length?`<div class="people">${groups.map(([t,list,k])=>`<section class="panel pgroup"><h3>${esc(t)}</h3>${list.slice().sort(k==="leader"?sortP:(a,b)=>String(a.name).localeCompare(b.name)).map(p=>`<div class="prow"><span class="pcode">${esc(p.code||"")}${p.initials?" · "+esc(p.initials):""}</span><span>${esc(p.name||"")}</span><span class="prole">${esc(p.role||"")}</span></div>`).join("")}</section>`).join("")}</div>`
+    ${P.length?`<div class="people">${groups.map(([t,list,k])=>`<section class="panel pgroup"><h3>${esc(t)}</h3>${list.slice().sort(k==="leader"?sortP:(a,b)=>String(a.name).localeCompare(b.name)).map(p=>`<div class="prow"><span class="pcode">${esc([p.code,p.initials].filter(Boolean).join(" · "))}</span><span>${esc(p.name||"")}</span><span class="prole">${esc(p.role||"")}</span></div>`).join("")}</section>`).join("")}</div>`
       :`<div class="panel empty"><p>No people yet. Add the initials and role codes you use when planning, so everyone knows who SH or YWP is.</p></div>`}`;
 }
 let peopleTimer=0;
 function savePeople(){clearTimeout(peopleTimer);peopleTimer=setTimeout(()=>put("meta","people",{list:state.people}),600);}
 document.addEventListener("input",e=>{if(e.target.dataset&&e.target.dataset.colour){document.documentElement.style.setProperty("--a-"+e.target.dataset.colour,e.target.value);return;}});
+document.addEventListener("change",e=>{const t=e.target;if(t.dataset&&t.dataset.pf==="kind"){const p=state.people[+t.dataset.pi];if(p){if(p.kind!=="leader"&&p.code&&!p.initials)p.initials=p.code;if(p.kind!=="leader")p.code="";}render();}});
 document.addEventListener("input",e=>{const t=e.target;if(!t.dataset||t.dataset.pi===undefined)return;
   const p=state.people[+t.dataset.pi];if(!p)return;p[t.dataset.pf]=/^(code|initials)$/.test(t.dataset.pf)?t.value.trim().toUpperCase():t.value;
   clearTimeout(peopleTimer);peopleTimer=setTimeout(()=>{pending.push({col:"meta",id:"people",body:{list:state.people}});clearTimeout(flushTimer);flushTimer=setTimeout(flush,250);},600);});
@@ -901,7 +908,7 @@ function planSearch(){
   planHits=state.people.map(p=>[score(p),p]).filter(x=>x[0]<9).sort((x,y)=>x[0]-y[0]||String(x[1].name).localeCompare(y[1].name)).slice(0,8).map(x=>x[1]);
   planSel=0;
   const dual=setupOf()==="dual",kind={leader:"Leader",yw:"Young Women",ym:"Young Men"};
-  list.innerHTML=(planHits.length?planHits.map((p,i)=>`<div class="popt${i===planSel?" on":""}" role="option" data-pi="${i}"><b>${esc(p.code)}${p.initials&&p.kind==="leader"?" · "+esc(p.initials):""}</b> ${esc(nameInitial(p))}<span>${esc([p.role||kind[p.kind]||"",dual?p.ward:""].filter(Boolean).join(" · "))}</span></div>`).join("")
+  list.innerHTML=(planHits.length?planHits.map((p,i)=>`<div class="popt${i===planSel?" on":""}" role="option" data-pi="${i}"><b>${esc([p.code,p.initials].filter(Boolean).join(" · "))}</b> ${esc(nameInitial(p))}<span>${esc([p.role||kind[p.kind]||"",dual?p.ward:""].filter(Boolean).join(" · "))}</span></div>`).join("")
     :`<div class="popt none">Press Enter to add “${esc($("#fPlanQ").value.trim())}”</div>`);
   list.hidden=false;
 }
