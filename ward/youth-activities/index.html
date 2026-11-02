@@ -96,6 +96,18 @@ main{max-width:980px;margin:0 auto;padding-top:16px;display:flex;flex-direction:
 .lay button[aria-pressed="true"]{background:var(--ink-2);color:var(--surface)}
 .lay.sides{margin-left:0}
 .gridwrap{overflow-x:auto;padding:0}
+main:has(.calwrap){max-width:1320px}
+.calwrap{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:16px;align-items:start}
+.calmain{display:flex;flex-direction:column;gap:16px;min-width:0}
+.ideaside{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto;padding:12px;display:flex;flex-direction:column;gap:6px}
+.ideaside h2{font:700 15px var(--display);margin:4px 0 0}
+.ideaside .hint{font-size:12.5px;color:var(--muted);margin:0 0 4px}
+.ideaside .inote,.ideaside .iact:empty{display:none}
+.sdrag{cursor:grab}.sdrag:active{cursor:grabbing}
+.sdrag.lift{opacity:.45}
+body.dragging td.emp.ok{outline:2px dashed var(--line-2);outline-offset:-4px}
+td.emp.over{outline:2px dashed var(--accent)!important;outline-offset:-4px;background:color-mix(in srgb,var(--accent) 10%,var(--surface))}
+@media (max-width:1199px){.calwrap{display:block}.ideaside{display:none}main:has(.calwrap){max-width:980px}}
 .cal{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;min-width:520px;font-size:13px}
 .cal th,.cal td{border-bottom:1px solid var(--line);padding:4px;vertical-align:top}
 .cal thead th{font-size:12px;font-weight:700;color:var(--ink-2);text-align:left;padding:9px 6px;background:var(--surface-2)}
@@ -564,7 +576,7 @@ function renderGrid(list,today){
   const cols=gridColumns();cols_=cols;
   const byDate=new Map();
   for(const e of list){if(!byDate.has(e[1].date))byDate.set(e[1].date,[]);byDate.get(e[1].date).push(e);}
-  if(state.when==="upcoming"){       // empty activity nights to plan into
+  if(state.when!=="past"){       // empty activity nights to plan into
     const nd=nightDay(),d=dateObj(today);while(d.getDay()!==nd)d.setDate(d.getDate()+1);
     for(let i=0;i<12;i++){const iso=d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());if(!byDate.has(iso))byDate.set(iso,[]);d.setDate(d.getDate()+7);}
   }
@@ -579,7 +591,7 @@ function renderGrid(list,today){
     h+=`<tr${iso===today?' class="today"':""}><th class="dcol" scope="row"><b>${d.getDate()}</b> <span>${esc(d.toLocaleDateString(undefined,{weekday:"short"}))}</span></th>`;
     for(let i=0;i<cells.length;){
       let j=i+1;while(j<cells.length&&cells[i].key&&cells[j].key===cells[i].key)j++;
-      h+=cells[i].list.length?evCell(cells[i].list,j-i):`<td class="emp"><button type="button" data-act="new-at" data-date="${iso}" data-group="${esc(cells[i].col)}" aria-label="Add an activity for ${esc(cells[i].col)} on ${esc(d.toLocaleDateString())}">+</button></td>`;
+      h+=cells[i].list.length?evCell(cells[i].list,j-i):`<td class="emp${iso>=today?" ok":""}"><button type="button" data-act="new-at" data-date="${iso}" data-group="${esc(cells[i].col)}" aria-label="Add an activity for ${esc(cells[i].col)} on ${esc(d.toLocaleDateString())}">+</button></td>`;
       i=j;
     }
     h+=`</tr>`;
@@ -587,6 +599,40 @@ function renderGrid(list,today){
   return h+`</tbody></table></div>`;
 }
 
+/** Desktop: unplanned ideas beside the grid, to drag onto a future night. */
+function withIdeas(main){
+  if(state.readOnly)return main;
+  const mine=[...state.activities.entries()].filter(([,a])=>!a.date&&(!state.areas.size||(a.areas||[]).some(x=>state.areas.has(x))))
+    .sort((x,y)=>String(x[1].title).localeCompare(y[1].title));
+  const have=new Set([...state.activities.values()].flatMap(a=>linksOf(a)));
+  const fsy=FSY_IDEAS.map((i,n)=>[i,n]).filter(([i])=>!have.has(i.url)&&(!state.areas.size||i.areas.some(x=>state.areas.has(x))));
+  const item=(drag,i,meta,editId)=>`<div class="sdrag" draggable="true" data-drag="${esc(drag)}">${ideaBlock(i,meta,"",editId)}</div>`;
+  return `<div class="calwrap"><div class="calmain">${main}</div><aside class="ideaside panel" aria-label="Ideas">
+    <h2>Ideas</h2><p class="hint">Drag an idea onto a future night.</p>
+    ${mine.length?mine.map(([id,a])=>item("a:"+id,a,areaPills(a)||"No area yet",id)).join(""):`<p class="hint">No unplanned ideas.</p>`}
+    ${fsy.length?`<h2>For the Strength of Youth</h2>${fsy.map(([i,n])=>item("f:"+n,i,(areaPills(i)||"")+" "+esc(i.issue))).join("")}`:""}
+  </aside></div>`;
+}
+function dropIdea(drag,date,group){
+  const [k,v]=[drag.slice(0,1),drag.slice(2)];
+  const checks=DEFAULT_CHECKS.map(t=>({t,d:false}));
+  if(k==="a"){const a=state.activities.get(v);if(!a)return;
+    put("activities",v,{...a,date,group,status:"planned",checks:(a.checks&&a.checks.length)?a.checks:checks,updated:Date.now()});
+    toast(`Planned “${a.title}” for ${dateObj(date).toLocaleDateString()}.`);}
+  else if(k==="f"){const i=FSY_IDEAS[+v];if(!i)return;
+    put("activities",newId(),{...unplanned(i.title,i.areas,i.notes,[i.url]),date,group,status:"planned",checks});
+    toast(`Planned “${i.title}” for ${dateObj(date).toLocaleDateString()}.`);}
+}
+let dragVal="";
+document.addEventListener("dragstart",e=>{const d=e.target.closest&&e.target.closest("[data-drag]");if(!d)return;
+  dragVal=d.dataset.drag;e.dataTransfer.setData("text/plain",dragVal);e.dataTransfer.effectAllowed="move";d.classList.add("lift");document.body.classList.add("dragging");});
+document.addEventListener("dragend",()=>{dragVal="";document.body.classList.remove("dragging");document.querySelectorAll(".lift,.over").forEach(x=>x.classList.remove("lift","over"));});
+document.addEventListener("dragover",e=>{const td=dragVal&&e.target.closest&&e.target.closest("td.emp.ok");if(!td)return;e.preventDefault();e.dataTransfer.dropEffect="move";
+  document.querySelectorAll(".over").forEach(x=>x!==td&&x.classList.remove("over"));td.classList.add("over");});
+document.addEventListener("dragleave",e=>{const td=e.target.closest&&e.target.closest("td.emp.over");if(td&&!td.contains(e.relatedTarget))td.classList.remove("over");});
+document.addEventListener("drop",e=>{const td=dragVal&&e.target.closest&&e.target.closest("td.emp.ok");if(!td)return;e.preventDefault();
+  const b=td.querySelector("[data-date]"),v=dragVal;document.body.classList.remove("dragging");dragVal="";
+  if(b&&b.dataset.date>=todayIso())dropIdea(v,b.dataset.date,b.dataset.group);});
 function renderCalendar(){
   const today=todayIso();
   let list=sortedActivities().filter(([,a])=>{
@@ -610,7 +656,7 @@ function renderCalendar(){
   if(!dated.length){
     return h+`<div class="panel empty"><h2>Nothing on the calendar yet</h2><p>Give an idea a date to plan it, or add a new activity.</p><button class="btn primary" type="button" data-act="new">+ New activity</button> <button class="btn" type="button" data-act="view" data-view="ideas">Browse ideas</button></div>`;
   }
-  if(state.layout==="grid"&&(list.length||state.when==="upcoming"))return h+(state.when==="upcoming"&&!list.length&&nPast?`<p class="muted">Nothing planned yet. Tap + on a night to add an activity. <button class="linkbtn" type="button" data-act="show-past">Show past activities (${nPast})</button></p>`:"")+renderGrid(list,today);
+  if(state.layout==="grid"&&(list.length||state.when!=="past"))return withIdeas(h+(state.when==="upcoming"&&!list.length&&nPast?`<p class="muted">Nothing planned yet. Tap + on a night to add an activity. <button class="linkbtn" type="button" data-act="show-past">Show past activities (${nPast})</button></p>`:"")+renderGrid(list,today));
   if(!list.length)return h+`<div class="panel empty"><p>${state.when==="upcoming"?"Nothing coming up yet.":"Nothing matches this filter."}</p>${state.when==="upcoming"&&nPast?`<button class="btn" type="button" data-act="show-past">Show past activities (${nPast})</button> `:""}<button class="btn primary" type="button" data-act="new">+ New activity</button></div>`;
   let month="";
   for(const[id,a]of list){
