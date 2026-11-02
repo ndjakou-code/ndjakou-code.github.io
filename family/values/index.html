@@ -1,0 +1,1028 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Family Values Vote</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Baloo+2:wght@500;700;800&display=swap">
+<style>
+/* Layout: one column like a sheet of stickers. Tap your name, fill three slots for
+   "our family" and three for "me", then everyone's picks add up on a shared tally.
+   Every value has its own sticker colour (--v0…--v11); people have avatar colours (--p0…--p7). */
+:root {
+  --bg: #EDF2F4;
+  --surface: #FFFFFF;
+  --ink: #17222C;
+  --muted: #546372;
+  --line: #CCD8DE;
+  --family: #C63D22;
+  --me: #0D7A6F;
+  --on-accent: #FFFFFF;
+  --ok: #1F8A4C;
+  --danger: #B42318;
+  --focus: #1E6FD9;
+  --shade: #0B1218;
+  --p0: #E0533A; --p1: #E3961A; --p2: #2E9E5B; --p3: #1E7FC4;
+  --p4: #7A55C9; --p5: #C9437E; --p6: #12988C; --p7: #9A7440;
+  --v0: #C0392B; --v1: #B5591A; --v2: #8A6D00; --v3: #3F7D20; --v4: #0E7C66; --v5: #1D6FA5;
+  --v6: #3B5BC9; --v7: #7A4FC4; --v8: #A63D9A; --v9: #C2366B; --v10: #6B6F1F; --v11: #8C5A3C;
+  --display: "Baloo 2", "Trebuchet MS", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --r: 16px;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10171D; --surface: #19232B; --ink: #E8EEF1; --muted: #9DADB8; --line: #2D3B46;
+    --family: #FF7656; --me: #3CC4B4; --on-accent: #10171D; --ok: #52C784; --danger: #FF6B5E; --focus: #7DB4FF;
+    --p0: #FF7A5E; --p1: #F5B53D; --p2: #4CC27C; --p3: #4FA6EA;
+    --p4: #A383F0; --p5: #EE6FA5; --p6: #3CC4B8; --p7: #C99A5E;
+    --v0: #FF7B6B; --v1: #F59A4A; --v2: #E3C24A; --v3: #8BCB5E; --v4: #3CC9A9; --v5: #5AB0EC;
+    --v6: #8EA2FF; --v7: #B596F5; --v8: #E58AD8; --v9: #FF7FA8; --v10: #C3C85A; --v11: #D7A27C;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10171D; --surface: #19232B; --ink: #E8EEF1; --muted: #9DADB8; --line: #2D3B46;
+  --family: #FF7656; --me: #3CC4B4; --on-accent: #10171D; --ok: #52C784; --danger: #FF6B5E; --focus: #7DB4FF;
+  --p0: #FF7A5E; --p1: #F5B53D; --p2: #4CC27C; --p3: #4FA6EA;
+  --p4: #A383F0; --p5: #EE6FA5; --p6: #3CC4B8; --p7: #C99A5E;
+  --v0: #FF7B6B; --v1: #F59A4A; --v2: #E3C24A; --v3: #8BCB5E; --v4: #3CC9A9; --v5: #5AB0EC;
+  --v6: #8EA2FF; --v7: #B596F5; --v8: #E58AD8; --v9: #FF7FA8; --v10: #C3C85A; --v11: #D7A27C;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.5; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+.wrap {
+  max-width: 880px; margin: 0 auto;
+  padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.view { display: grid; gap: 22px; }
+h1, h2, h3, h4 { font-family: var(--display); line-height: 1.1; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(2.1rem, 7vw, 3.2rem); font-weight: 800; }
+h2 { font-size: clamp(1.6rem, 5vw, 2.2rem); font-weight: 800; }
+h3 { font-size: 1.35rem; font-weight: 800; }
+h4 { font-size: 1.2rem; font-weight: 700; }
+p { margin: 0; }
+.lede { color: var(--muted); max-width: 60ch; font-size: 1.05rem; }
+.eyebrow { font-size: .78rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.stack { display: grid; gap: 8px; }
+.empty { color: var(--muted); padding: 18px; border: 2px dashed var(--line); border-radius: var(--r); }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 48px; padding: 10px 22px 8px; border-radius: 999px; border: 2px solid transparent;
+  font-family: var(--display); font-weight: 700; font-size: 1.1rem; line-height: 1;
+}
+.btn.primary { background: var(--mode, var(--ink)); color: var(--mode-on, var(--bg)); }
+.btn.primary:disabled { opacity: .4; cursor: not-allowed; }
+.btn.ghost { background: transparent; border-color: var(--line); }
+.btn.ghost:hover { border-color: var(--ink); }
+.btn.small { min-height: 44px; padding: 8px 18px 6px; font-size: 1rem; }
+.link { background: none; border: 0; padding: 8px 0; color: var(--muted); font-weight: 700; }
+.link:hover { color: var(--ink); }
+.row-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* Home */
+.progress-wrap { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.progress { display: flex; gap: 4px; }
+.seg { width: 26px; height: 10px; border-radius: 999px; background: var(--line); }
+.seg.on { background: var(--c); }
+.progress-wrap span { font-weight: 700; color: var(--muted); }
+.people { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (min-width: 600px) { .people { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.person {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; row-gap: 2px; align-items: center;
+  text-align: left; padding: 14px; min-height: 86px;
+  background: var(--surface); border: 2px solid var(--line); border-radius: var(--r);
+  transition: transform .12s ease, border-color .12s ease;
+}
+.person:hover { border-color: var(--c); transform: translateY(-2px); }
+.person .avatar { grid-row: 1 / span 2; }
+.avatar {
+  width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; flex: none;
+  padding-top: 4px; font-family: var(--display); font-weight: 800; font-size: 1.6rem; line-height: 1;
+  background: color-mix(in oklab, var(--c) 24%, var(--surface)); border: 3px solid var(--c); color: var(--ink);
+}
+.avatar.sm { width: 36px; height: 36px; font-size: 1.1rem; border-width: 2px; padding-top: 3px; }
+.pname { font-family: var(--display); font-weight: 700; font-size: 1.3rem; line-height: 1.1; overflow-wrap: anywhere; align-self: end; }
+.pstatus { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; color: var(--muted); align-self: start; }
+.pstatus::before { content: ""; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--muted); flex: none; }
+.pstatus.part::before { background: linear-gradient(90deg, var(--muted) 50%, transparent 50%); }
+.pstatus.done { color: var(--ok); font-weight: 700; }
+.pstatus.done::before { background: var(--ok); border-color: var(--ok); }
+
+.grownups { border-top: 2px dashed var(--line); padding-top: 18px; }
+.grownups summary { font-family: var(--display); font-weight: 700; font-size: 1.1rem; color: var(--muted); cursor: pointer; width: max-content; max-width: 100%; }
+.gu { display: grid; gap: 22px; padding-top: 18px; }
+.gu section { display: grid; gap: 10px; }
+.gu p { color: var(--muted); font-size: .92rem; }
+.chiplist { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.chiplist li { display: inline-flex; align-items: center; gap: 6px; padding: 3px 3px 3px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--vc); flex: none; }
+.mini { border: 0; background: transparent; color: var(--muted); padding: 6px 10px; border-radius: 999px; font-size: .85rem; font-weight: 700; min-height: 32px; }
+.mini:hover { background: var(--bg); color: var(--ink); }
+.mini.armed, .btn.armed { background: var(--danger); border-color: var(--danger); color: var(--on-accent); }
+.inline-form { display: flex; gap: 8px; max-width: 460px; }
+.inline-form input {
+  flex: 1; min-width: 0; min-height: 46px; padding: 10px 16px; border-radius: 999px;
+  border: 2px solid var(--line); background: var(--surface);
+}
+.inline-form input:focus-visible { outline-offset: 0; }
+
+/* Voting */
+.vote { --mode: var(--family); --mode-on: var(--on-accent); }
+.vote[data-step="me"] { --mode: var(--me); }
+.vote-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.who { display: inline-flex; align-items: center; gap: 10px; font-family: var(--display); font-weight: 700; font-size: 1.15rem; }
+.step {
+  justify-self: start; padding: 6px 12px; border-radius: 999px; font-size: .8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  background: color-mix(in oklab, var(--mode) 14%, var(--surface)); color: var(--mode);
+}
+.slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(108px, 1fr)); gap: 10px; }
+.slot {
+  min-height: 66px; padding: 8px; border-radius: 14px; display: flex; align-items: center; justify-content: center; gap: 6px; text-align: center;
+  font-family: var(--display); font-weight: 700; font-size: clamp(.95rem, 3.4vw, 1.2rem); line-height: 1.1;
+  hyphens: auto; overflow-wrap: anywhere;
+}
+.slot.empty { border: 2.5px dashed color-mix(in oklab, var(--mode) 45%, var(--line)); color: var(--muted); font-family: var(--body); font-weight: 400; font-size: .92rem; }
+.slot.filled { background: var(--vc); color: var(--on-accent); border: 0; box-shadow: 0 3px 0 color-mix(in oklab, var(--vc) 55%, var(--shade)); }
+.slot.filled:nth-child(1) { rotate: -1.5deg; }
+.slot.filled:nth-child(2) { rotate: 1deg; }
+.slot.filled:nth-child(3) { rotate: -.6deg; }
+.slot .x { font-size: 1.2em; opacity: .75; }
+.slot.new { animation: pop .2s ease-out; }
+@keyframes pop { from { transform: scale(.82); } to { transform: scale(1); } }
+
+.values { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 10px; }
+.value {
+  position: relative; display: grid; gap: 4px; align-content: start; text-align: left;
+  min-height: 94px; padding: 14px 40px 14px 14px; border-radius: 14px;
+  background: color-mix(in oklab, var(--vc) 10%, var(--surface));
+  border: 2px solid color-mix(in oklab, var(--vc) 38%, var(--surface));
+  transition: background-color .12s ease, border-color .12s ease, opacity .12s ease;
+}
+.value:hover { border-color: var(--vc); }
+.vname { font-family: var(--display); font-weight: 700; font-size: 1.22rem; line-height: 1.1; overflow-wrap: anywhere; color: var(--vc); }
+.vmean { font-size: .88rem; line-height: 1.35; color: var(--muted); }
+.tick { position: absolute; top: 12px; right: 12px; width: 22px; height: 22px; border-radius: 50%; border: 2px solid color-mix(in oklab, var(--vc) 50%, var(--surface)); display: grid; place-items: center; }
+.value[aria-pressed="true"] { background: var(--vc); border-color: var(--vc); color: var(--on-accent); }
+.value[aria-pressed="true"] .vname { color: var(--on-accent); }
+.value[aria-pressed="true"] .vmean { color: var(--on-accent); opacity: .9; }
+.value[aria-pressed="true"] .tick { background: var(--on-accent); border-color: var(--on-accent); }
+.value[aria-pressed="true"] .tick::after { content: ""; width: 6px; height: 11px; margin-top: -3px; border: solid var(--vc); border-width: 0 3px 3px 0; rotate: 45deg; }
+.values.full .value[aria-pressed="false"] { opacity: .5; }
+.vattr { font-size: .8rem; font-weight: 700; color: var(--vc); }
+.value[aria-pressed="true"] .vattr { color: var(--on-accent); }
+.star { margin-left: .18em; }
+.legend { color: var(--muted); font-size: .92rem; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.add-value { display: grid; gap: 8px; }
+.add-value label { font-weight: 700; }
+
+.bar {
+  position: sticky; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); z-index: 5;
+  display: flex; align-items: center; gap: 10px; padding: 8px;
+  background: color-mix(in oklab, var(--surface) 94%, transparent); backdrop-filter: blur(8px);
+  border: 1px solid var(--line); border-radius: 999px;
+  box-shadow: 0 8px 28px color-mix(in oklab, var(--shade) 16%, transparent);
+}
+.bar .count { flex: 1; text-align: center; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* Done */
+.done-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 14px; }
+.box { background: var(--surface); border: 2px solid var(--line); border-radius: var(--r); padding: 18px; display: grid; gap: 12px; align-content: start; }
+.chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.chips li { padding: 7px 14px 5px; border-radius: 999px; font-family: var(--display); font-weight: 700; font-size: 1.05rem; line-height: 1.2; background: var(--vc); color: var(--on-accent); }
+.chips.small li { padding: 4px 11px 3px; font-size: .92rem; background: color-mix(in oklab, var(--vc) 16%, var(--surface)); color: var(--ink); box-shadow: inset 0 0 0 2px var(--vc); }
+.sub { font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.value.locked { background: color-mix(in oklab, var(--vc) 22%, var(--surface)); border-style: dashed; cursor: not-allowed; }
+.tag-fam { color: var(--family); }
+.tag-me { color: var(--me); }
+
+/* Results */
+.podium { display: flex; flex-wrap: wrap; gap: 14px; padding-block: 6px; }
+.stick { display: grid; gap: 2px; min-width: 150px; padding: 16px 22px 14px; border-radius: 16px; background: var(--vc); color: var(--on-accent); box-shadow: 0 4px 0 color-mix(in oklab, var(--vc) 55%, var(--shade)); }
+.stick:nth-child(odd) { rotate: -1.5deg; }
+.stick:nth-child(even) { rotate: 1.2deg; }
+.stick b { font-family: var(--display); font-weight: 800; font-size: 1.3rem; line-height: 1; }
+.stick.big b { font-size: 1.8rem; }
+.stick span { font-size: .88rem; opacity: .92; }
+.note { font-size: .95rem; color: var(--muted); }
+.tally { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+.trow { display: grid; gap: 6px; }
+.thead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.tname { font-family: var(--display); font-weight: 700; font-size: 1.15rem; color: var(--vc); }
+.tnum { font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.track { height: 12px; border-radius: 999px; background: color-mix(in oklab, var(--line) 70%, var(--surface)); overflow: hidden; }
+.fill { height: 100%; border-radius: inherit; background: color-mix(in oklab, var(--vc) 40%, var(--surface)); }
+.trow.top .fill { background: var(--vc); }
+.tby { font-size: .86rem; color: var(--muted); }
+.callout {
+  --mode: var(--family); --mode-on: var(--on-accent);
+  display: grid; gap: 12px; padding: 18px; border-radius: var(--r);
+  background: color-mix(in oklab, var(--family) 9%, var(--surface));
+  border: 2px solid color-mix(in oklab, var(--family) 35%, var(--surface));
+}
+.callout p { max-width: 60ch; }
+.each { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 12px; }
+.card-head { display: flex; align-items: center; gap: 10px; }
+.none { color: var(--muted); }
+
+.toast {
+  position: fixed; z-index: 20; left: 50%; translate: -50% 0;
+  top: calc(12px + env(safe-area-inset-top, 0px)); max-width: calc(100% - 32px);
+  padding: 10px 18px; border-radius: 999px; background: var(--ink); color: var(--bg); font-weight: 700;
+  box-shadow: 0 8px 24px color-mix(in oklab, var(--shade) 25%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<div class="wrap" lang="en">
+
+  <section id="view-home" class="view">
+    <header class="stack">
+      <p class="eyebrow">Family vote</p>
+      <h1>What does our family stand for?</h1>
+      <p class="lede">Tap your name. Pick your top 3 values for our family, then 2 more, then 3 that describe you. Nobody sees any results until everyone has voted.</p>
+    </header>
+    <div id="home-final" class="stack" hidden>
+      <p class="sub">Our family values</p>
+      <div id="home-final-sticks" class="podium"></div>
+    </div>
+    <div id="home-progress-wrap" class="progress-wrap" hidden>
+      <div id="home-progress" class="progress" aria-hidden="true"></div>
+      <span id="home-count"></span>
+    </div>
+    <p id="people-msg" class="empty">Loading names…</p>
+    <div id="people" class="people"></div>
+    <div class="row-actions">
+      <button id="go-results" class="btn primary" type="button" hidden>See results</button>
+    </div>
+    <details class="grownups" id="grownups" hidden>
+      <summary>Grown-ups</summary>
+      <div class="gu">
+        <section>
+          <h4>Names</h4>
+          <ul id="gu-people" class="chiplist"></ul>
+          <form id="gu-add-person" class="inline-form" autocomplete="off">
+            <input id="gu-person-name" maxlength="20" placeholder="Add a name" aria-label="New name">
+            <button class="btn small ghost" type="submit">Add</button>
+          </form>
+        </section>
+        <section>
+          <h4>Values on the list</h4>
+          <ul id="gu-values" class="chiplist"></ul>
+          <form id="gu-add-value" class="inline-form" autocomplete="off">
+            <input id="gu-value-name" maxlength="28" placeholder="Add a value" aria-label="New value">
+            <button class="btn small ghost" type="submit">Add</button>
+          </form>
+        </section>
+        <section>
+          <h4>Start again</h4>
+          <p>Clears everyone's picks and our final 3. Names and values stay.</p>
+          <div><button id="gu-clear" class="btn small ghost" type="button">Clear all votes</button></div>
+        </section>
+      </div>
+    </details>
+  </section>
+
+  <section id="view-vote" class="view vote" data-step="top" hidden>
+    <div class="vote-top">
+      <button id="vote-exit" class="link" type="button">← Names</button>
+      <span id="vote-who" class="who"></span>
+    </div>
+    <div class="stack">
+      <p id="vote-step" class="step"></p>
+      <h2 id="vote-q"></h2>
+      <p id="vote-help" class="lede"></p>
+    </div>
+    <div id="vote-top3" class="stack" hidden>
+      <p class="sub">Your top 3</p>
+      <ul id="vote-top3-chips" class="chips"></ul>
+    </div>
+    <div id="slots" class="slots" aria-label="Your picks"></div>
+    <p id="legend" class="legend" hidden><span aria-hidden="true">★</span> Also a Christlike attribute in Preach My Gospel</p>
+    <div id="values" class="values" role="group" aria-label="Values to pick from"></div>
+    <form id="add-value" class="add-value" autocomplete="off">
+      <label for="new-value">Missing one? Add your own value</label>
+      <div class="inline-form">
+        <input id="new-value" maxlength="28" placeholder="Like Music or Kindness to animals">
+        <button class="btn small ghost" type="submit">Add</button>
+      </div>
+    </form>
+    <div class="bar">
+      <button id="vote-back" class="btn ghost small" type="button">Back</button>
+      <span id="vote-count" class="count"></span>
+      <button id="vote-next" class="btn primary small" type="button">Next</button>
+    </div>
+  </section>
+
+  <section id="view-done" class="view" hidden>
+    <div class="stack">
+      <p class="eyebrow">Saved</p>
+      <h2 id="done-title"></h2>
+    </div>
+    <div class="done-cols">
+      <div class="box">
+        <h3 class="tag-fam">Our family</h3>
+        <p class="sub">Top 3</p><ul id="done-top" class="chips"></ul>
+        <p class="sub">2 more</p><ul id="done-more" class="chips small"></ul>
+      </div>
+      <div class="box"><h3 class="tag-me">Me</h3><ul id="done-me" class="chips"></ul></div>
+    </div>
+    <p id="done-wait" class="note"></p>
+    <div class="row-actions">
+      <button id="done-next" class="btn primary" type="button">Next person</button>
+      <button id="done-results" class="btn ghost" type="button">See results</button>
+      <button id="done-edit" class="btn ghost" type="button">Change my picks</button>
+    </div>
+  </section>
+
+  <section id="view-results" class="view" hidden>
+    <div class="vote-top">
+      <button id="results-back" class="link" type="button">← Names</button>
+    </div>
+    <div class="stack">
+      <p class="eyebrow">Results</p>
+      <h2 id="results-title">The votes are in</h2>
+      <p id="results-count" class="lede"></p>
+    </div>
+    <div id="final-box" class="stack" hidden>
+      <p class="sub">Our final 3</p>
+      <div id="final-sticks" class="podium"></div>
+    </div>
+    <div class="stack">
+      <h3 class="tag-fam">Top 5</h3>
+      <p class="note">A top-3 pick scores 2 points. Each of the 2 more scores 1 point. Ties go to the value more people put in their top 3.</p>
+    </div>
+    <div id="podium" class="podium"></div>
+    <p id="tie-note" class="note" hidden></p>
+    <div class="callout">
+      <p id="final-call-text"></p>
+      <div><button id="go-final" class="btn primary" type="button">Pick our final 3</button></div>
+    </div>
+    <div class="stack">
+      <h3 class="tag-fam">What everyone picked for our family</h3>
+      <p class="note">Each person's top 3, then their 2 more.</p>
+    </div>
+    <div id="family-each" class="each"></div>
+    <h3 class="tag-fam">Every family vote</h3>
+    <ol id="family-tally" class="tally"></ol>
+    <h3 class="tag-me">What everyone picked about themselves</h3>
+    <div id="each" class="each"></div>
+  </section>
+
+  <section id="view-final" class="view vote" data-step="top" hidden>
+    <div class="vote-top">
+      <button id="final-exit" class="link" type="button">← Results</button>
+    </div>
+    <div class="stack">
+      <p class="step">Together</p>
+      <h2>Pick our final 3</h2>
+      <p class="lede">Talk it over, then tap the 3 values that will be our family values. They're sorted by score.</p>
+    </div>
+    <div id="final-slots" class="slots" aria-label="Our final 3"></div>
+    <p id="final-legend" class="legend" hidden><span aria-hidden="true">★</span> Also a Christlike attribute in Preach My Gospel</p>
+    <div id="final-values" class="values" role="group" aria-label="Values to choose from"></div>
+    <div class="bar">
+      <button id="final-back" class="btn ghost small" type="button">Back</button>
+      <span id="final-count" class="count"></span>
+      <button id="final-save" class="btn primary small" type="button">Save</button>
+    </div>
+  </section>
+
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(() => {
+  // Inside Claude the page saves to the artifact's own database. Anywhere else (GitHub Pages)
+  // it saves to the Family Values Apps Script, which also holds the names.
+  const API_URL = 'https://script.google.com/macros/s/AKfycbxiKIHMtl-NvUEdTdH2XAfksfIgZQHOHnTLXZ6D_vkStAbVD28d65Eoi3QrJLCnP8GltQ/exec';
+  const BUILD = '1793046652657';   // stamped by build.js; open phones reload when it changes
+
+  // Our family: top 3 first, then 2 more to make a top 5. Then 3 about me.
+  // Once everyone has voted, the family talks it over and picks a final 3 together.
+  const STEPS = ['top', 'more', 'me'];
+  const LIMIT = { top: 3, more: 2, me: 3 };
+  const POINTS = { top: 2, more: 1 };
+  const FINAL = 3;
+  const COPY = {
+    top: { step: 'Step 1 of 3 · Our family', q: 'Which 3 values matter most for our family?', help: 'Think about how we treat each other and what matters most in our home.', next: 'Next' },
+    more: { step: 'Step 2 of 3 · Our family', q: 'Now pick 2 more for our family', help: 'These make your top 5. Your top 3 are already in.', next: 'Next' },
+    me: { step: 'Step 3 of 3 · Me', q: 'Which 3 values describe you?', help: 'Pick the ones that sound most like you, or like the person you want to become.', next: 'Save' },
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const S = { store: null, status: 'connecting', people: [], values: [], picks: {}, final: null, revealed: false, saving: false };
+  let valueById = new Map();
+  let view = 'home';
+  let session = null; // { pid, step, top: [ids], more: [ids], me: [ids], fresh, saved }
+  let finalPick = [];
+  let finalFresh = '';
+  let toastTimer = 0;
+
+  function h(tag, attrs, ...kids) {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (v == null || v === false) continue;
+      if (k === 'class') n.className = v;
+      else if (k === 'css') for (const [p, val] of Object.entries(v)) n.style.setProperty(p, val);
+      else if (k.startsWith('on')) n.addEventListener(k.slice(2), v);
+      else n.setAttribute(k, v === true ? '' : String(v));
+    }
+    for (const c of kids.flat(Infinity)) if (c != null && c !== false) n.append(c);
+    return n;
+  }
+
+  const num = (x) => (typeof x === 'number' && isFinite(x) ? x : 9999);
+  const byOrder = (a, b) => num(a.order) - num(b.order) || String(a.name || '').localeCompare(String(b.name || ''));
+  const nextOrder = (arr) => arr.reduce((m, x) => Math.max(m, typeof x.order === 'number' ? x.order : 0), 0) + 1;
+  const hashOf = (s) => [...String(s)].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7);
+  const colorOf = (p) => `var(--p${(Number.isInteger(p.color) ? Math.abs(p.color) : hashOf(p.id)) % 8})`;
+  const vcolor = (v) => `var(--v${(Number.isInteger(v.color) ? Math.abs(v.color) : hashOf(v.id)) % 12})`;
+  const initial = (name) => (String(name || '?').trim()[0] || '?').toUpperCase();
+  const valid = (arr) => (Array.isArray(arr) ? arr.filter((id) => valueById.has(id)) : []);
+  const names = (people) => people.map((p) => p.name).join(', ');
+  const pts = (k) => (k === 1 ? '1 point' : `${k} points`);
+  const avatar = (p, cls) => h('span', { class: 'avatar' + (cls ? ' ' + cls : ''), 'aria-hidden': 'true' }, initial(p.name));
+  const tidy = (s, max) => {
+    const t = String(s || '').replace(/\s+/g, ' ').trim().slice(0, max);
+    return t ? t[0].toUpperCase() + t.slice(1) : '';
+  };
+
+  // A value's name, with a star when it is also a Christlike attribute (Preach My Gospel, chapter 6).
+  const vlabel = (v) => [v.name, v.christlike
+    ? h('span', { class: 'star' }, h('span', { 'aria-hidden': 'true' }, '★'), h('span', { class: 'sr' }, ' (Christlike attribute)'))
+    : null];
+  const chip = (id) => { const v = valueById.get(id); return h('li', { css: { '--vc': vcolor(v) } }, vlabel(v)); };
+  const stick = (v, note, big) => h('div', { class: 'stick' + (big ? ' big' : ''), css: { '--vc': vcolor(v) } },
+    h('b', {}, vlabel(v)), note ? h('span', {}, note) : null);
+
+  // A person's saved picks, cleaned: top 3, 2 more (never repeating the top 3), 3 about me.
+  const picksOf = (pid) => {
+    const p = S.picks[pid] || {};
+    const top = valid(p.top).slice(0, LIMIT.top);
+    return { top, more: valid(p.more).filter((id) => !top.includes(id)).slice(0, LIMIT.more), me: valid(p.me).slice(0, LIMIT.me) };
+  };
+  const isDone = (pid) => STEPS.every((s) => picksOf(pid)[s].length >= LIMIT[s]);
+  const isStarted = (pid) => STEPS.some((s) => picksOf(pid)[s].length > 0);
+  const allDone = () => S.people.length > 0 && S.people.every((p) => isDone(p.id));
+  const finalIds = () => valid(S.final && S.final.ids).slice(0, FINAL);
+  // Results stay hidden until everyone has voted once, so nobody is swayed by anyone else's picks.
+  // After that they stay open and recalculate as people change their picks.
+  const resultsOpen = () => allDone() || S.revealed || finalIds().length > 0;
+
+  function toast(msg) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.hidden = true; }, 3200);
+  }
+
+  function failed(e) {
+    console.error(e);
+    const code = e && e.code;
+    toast(e && e.userMessage ? e.userMessage
+      : code === 'invalid_argument' ? "This account can't save votes. Open the page from the Claude account that made it."
+      : code === 'quota_exceeded' ? 'The vote is full. Remove some names or values.'
+      : "That didn't save. Check the connection and try again.");
+  }
+
+  // ---------------------------------------------------------------- stores
+
+  // One write at a time, in order.
+  function queue() {
+    let tail = Promise.resolve();
+    return (fn) => { const run = tail.then(fn); tail = run.catch(() => {}); return run; };
+  }
+
+  function dbStore(db) {
+    const write = queue();
+    const st = { people: [], values: [], picks: {}, final: null, revealed: false };
+    const got = new Set();
+    return {
+      start(onState, onError) {
+        const sub = (name, apply) => db.collection(name).onSnapshot((snap) => {
+          apply(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+          got.add(name);
+          if (got.size === 4) onState(st);
+        }, onError);
+        sub('values', (docs) => { st.values = docs; });
+        sub('people', (docs) => { st.people = docs; });
+        sub('picks', (docs) => { st.picks = Object.fromEntries(docs.map((d) => [d.id, d])); });
+        sub('meta', (docs) => {
+          st.final = docs.find((d) => d.id === 'final') || null;
+          st.revealed = docs.some((d) => d.id === 'revealed');
+        });
+      },
+      markRevealed: () => write(() => db.doc('meta/revealed').set({ at: Date.now() })),
+      savePicks: (pid, p) => write(() => db.doc('picks/' + pid).set({ top: p.top, more: p.more, me: p.me, updatedAt: Date.now() })),
+      setFinal: (ids) => write(() => db.doc('meta/final').set({ ids, decidedAt: Date.now() })),
+      async addPerson(name) {
+        const ref = db.collection('people').doc();
+        const used = new Set(S.people.map((p) => p.color));
+        let color = 0;
+        while (used.has(color) && color < 7) color++;
+        await write(() => ref.set({ name, order: nextOrder(S.people), color }));
+        return ref.id;
+      },
+      removePerson: (id) => write(() => db.doc('people/' + id).delete()).then(() => write(() => db.doc('picks/' + id).delete())),
+      async addValue(name, by) {
+        const ref = db.collection('values').doc();
+        const order = nextOrder(S.values);
+        await write(() => ref.set({ name, meaning: '', order, color: (order - 1) % 12, addedBy: by || null }));
+        return ref.id;
+      },
+      removeValue: (id) => write(() => db.doc('values/' + id).delete()),
+      clearVotes: () => Object.keys(S.picks).map((id) => 'picks/' + id).concat('meta/final', 'meta/revealed')
+        .reduce((chain, path) => chain.then(() => write(() => db.doc(path).delete())), Promise.resolve()),
+    };
+  }
+
+  function apiStore(url) {
+    let rev = -1, onState = null, busy = false;
+    async function call(fn, ...args) {
+      const r = await fetch(url, { method: 'POST', body: JSON.stringify({ fn, args }), redirect: 'follow' });
+      const j = await r.json();
+      if (!j.ok) throw Object.assign(new Error(j.error || 'Request failed'), { userMessage: j.error });
+      return j.result;
+    }
+    function apply(s) {
+      if (!s || s.rev <= rev) return;
+      rev = s.rev;
+      onState({ people: s.people || [], values: s.values || [], picks: s.picks || {}, final: s.final || null, revealed: !!s.revealed });
+    }
+    async function refresh(onError) {
+      if (busy) return;
+      busy = true;
+      try { apply(await call('getAll')); }
+      catch (e) { if (onError) onError(e); }
+      finally { busy = false; }
+    }
+    const change = async (fn, ...args) => { const r = await call(fn, ...args); apply(r.state); return r.id; };
+    // A phone left open keeps the page it loaded; reload it when a newer one is published,
+    // but never while someone is part-way through picking.
+    async function checkForNewPage() {
+      if (!/^\d+$/.test(BUILD) || view === 'vote' || view === 'final') return;
+      try {
+        const html = await (await fetch(location.pathname, { cache: 'no-store' })).text();
+        const m = html.match(/const BUILD = '(\d+)'/);
+        if (m && m[1] !== BUILD) location.reload();
+      } catch (e) { /* offline: try again later */ }
+    }
+    return {
+      start(cb, onError) {
+        onState = cb;
+        refresh(onError);
+        setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 8000);
+        setInterval(() => { if (document.visibilityState === 'visible') checkForNewPage(); }, 60000);
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') { refresh(); checkForNewPage(); }
+        });
+      },
+      markRevealed: () => Promise.resolve(),   // the Apps Script records this itself
+      savePicks: (pid, p) => change('savePicks', pid, p.top, p.more, p.me),
+      setFinal: (ids) => change('setFinal', ids),
+      addPerson: (name) => change('addPerson', name),
+      removePerson: (id) => change('removePerson', id),
+      addValue: (name, by) => change('addValue', name, by || null),
+      removeValue: (id) => change('removeValue', id),
+      clearVotes: () => change('clearVotes'),
+    };
+  }
+
+  async function connect() {
+    let store = null;
+    if (window.claude && window.claude.use) {
+      let db = null;
+      try { db = await window.claude.use('db'); } catch (e) { db = null; }
+      if (db) store = dbStore(db);
+    } else if (/^https:/.test(API_URL)) {
+      store = apiStore(API_URL);
+    }
+    if (!store) { S.status = 'nodb'; render(); return; }
+    S.store = store;
+    store.start((st) => {
+      S.values = st.values.filter((v) => v.name).sort(byOrder);
+      valueById = new Map(S.values.map((v) => [v.id, v]));
+      S.people = st.people.filter((p) => p.name).sort(byOrder);
+      S.picks = st.picks;
+      S.final = st.final;
+      S.revealed = !!st.revealed;
+      S.status = 'ready';
+      if (allDone() && !S.revealed) S.store.markRevealed().catch(failed);
+      render();
+    }, (err) => {
+      console.error(err);
+      if (S.status !== 'ready') { S.status = 'error'; render(); }
+    });
+  }
+
+  // ---------------------------------------------------------------- shared pieces
+
+  // Two taps for anything that deletes.
+  function arm(btn, label, action) {
+    if (btn.dataset.armed) { action(); return; }
+    const old = btn.textContent;
+    btn.dataset.armed = '1';
+    btn.classList.add('armed');
+    btn.textContent = label;
+    setTimeout(() => {
+      if (btn.isConnected && btn.dataset.armed) {
+        delete btn.dataset.armed;
+        btn.classList.remove('armed');
+        btn.textContent = old;
+      }
+    }, 4000);
+  }
+
+  function slotEls(list, max, fresh, onTake) {
+    const out = [];
+    for (let i = 0; i < max; i++) {
+      const v = list[i] && valueById.get(list[i]);
+      out.push(v
+        ? h('button', { type: 'button', class: 'slot filled' + (fresh === v.id ? ' new' : ''), css: { '--vc': vcolor(v) }, 'aria-label': `Take off ${v.name}`, onclick: () => onTake(v.id) },
+            h('span', {}, vlabel(v)), h('span', { class: 'x', 'aria-hidden': 'true' }, '×'))
+        : h('div', { class: 'slot empty' }, 'Pick one'));
+    }
+    return out;
+  }
+
+  function valueCard(v, { pressed, locked, sub, onClick }) {
+    const attr = typeof v.christlike === 'string' && v.christlike.toLowerCase() !== v.name.toLowerCase() ? v.christlike : '';
+    return h('button', { type: 'button', class: 'value' + (locked ? ' locked' : ''), css: { '--vc': vcolor(v) }, 'data-vid': v.id,
+        'aria-pressed': String(!!pressed), 'aria-disabled': locked ? 'true' : null, onclick: onClick },
+      h('span', { class: 'vname' }, vlabel(v)),
+      h('span', { class: 'vmean' }, sub),
+      attr ? h('span', { class: 'vattr' }, `Preach My Gospel: ${attr}`) : null,
+      h('span', { class: 'tick', 'aria-hidden': 'true' }));
+  }
+
+  // Swap in new cards without losing keyboard focus.
+  function fillGrid(grid, cards, full) {
+    const el = document.activeElement;
+    const focused = el && el.dataset ? el.dataset.vid : '';
+    grid.classList.toggle('full', full);
+    grid.replaceChildren(...cards);
+    if (focused) { const b = grid.querySelector(`[data-vid="${CSS.escape(focused)}"]`); if (b) b.focus({ preventScroll: true }); }
+  }
+
+  // A top-3 pick scores 2 points, each of the 2 more scores 1; more top-3 picks breaks a tie.
+  // The 5 highest scores are the winners.
+  function familyRows() {
+    const voters = S.people.filter((p) => picksOf(p.id).top.length + picksOf(p.id).more.length);
+    const counts = new Map();
+    const tallyOf = (id) => counts.get(id) || counts.set(id, { top: [], more: [] }).get(id);
+    for (const p of voters) {
+      const f = picksOf(p.id);
+      f.top.forEach((id) => tallyOf(id).top.push(p));
+      f.more.forEach((id) => tallyOf(id).more.push(p));
+    }
+    const rows = [...counts].map(([id, t]) => ({ v: valueById.get(id), ...t, score: t.top.length * POINTS.top + t.more.length * POINTS.more }))
+      .map((r) => ({ ...r, key: r.score * 100 + r.top.length }))
+      .sort((a, b) => b.key - a.key || byOrder(a.v, b.v));
+    const cut = rows.length ? rows[Math.min(5, rows.length) - 1].key : 0;
+    return { voters, rows, cut, winners: rows.filter((r) => r.key >= cut), rank: new Map(rows.map((r) => [r.v.id, r])) };
+  }
+
+  // ---------------------------------------------------------------- views
+
+  function go(v) {
+    view = v;
+    for (const id of ['home', 'vote', 'done', 'results', 'final']) $('view-' + id).hidden = id !== v;
+    render();
+    window.scrollTo({ top: 0 });
+  }
+
+  function render() {
+    if ((view === 'results' || view === 'final') && !resultsOpen()) { go('home'); return; }
+    renderHome();
+    renderGrownups();
+    if (view === 'vote') renderVote();
+    else if (view === 'done') renderDone();
+    else if (view === 'results') renderResults();
+    else if (view === 'final') renderFinal();
+  }
+
+  function renderHome() {
+    const msg = $('people-msg');
+    let text = '';
+    if (S.status === 'connecting') text = 'Loading names…';
+    else if (S.status === 'nodb') text = "Votes are saved to Claude, so open this page while you're signed in to Claude (the Claude app or claude.ai).";
+    else if (S.status === 'error') text = "Couldn't reach the vote. Check the internet connection, then reload the page.";
+    else if (!S.people.length) text = 'No names yet. Open Grown-ups below and add the first one.';
+    msg.textContent = text;
+    msg.hidden = !text;
+
+    const ready = S.status === 'ready';
+    const fin = finalIds();
+    $('home-final').hidden = !ready || !resultsOpen() || fin.length !== FINAL;
+    $('home-final-sticks').replaceChildren(...fin.map((id) => stick(valueById.get(id), '', true)));
+
+    $('people').replaceChildren(...(ready ? S.people : []).map((p) => {
+      const done = isDone(p.id), started = !done && isStarted(p.id);
+      return h('button', { type: 'button', class: 'person', css: { '--c': colorOf(p) }, onclick: () => (done ? showPicks(p.id) : startVoting(p.id)) },
+        avatar(p),
+        h('span', { class: 'pname' }, p.name),
+        h('span', { class: 'pstatus' + (done ? ' done' : started ? ' part' : '') }, done ? 'Voted' : started ? 'Started' : 'Not voted yet'));
+    }));
+
+    const n = S.people.length, k = S.people.filter((p) => isDone(p.id)).length;
+    $('home-progress-wrap').hidden = !n || !ready;
+    $('home-progress').replaceChildren(...S.people.map((p) => h('span', { class: 'seg' + (isDone(p.id) ? ' on' : ''), css: { '--c': colorOf(p) } })));
+    $('home-count').textContent = n && k === n ? 'Everyone has voted!' : `${k} of ${n} voted`;
+    $('go-results').hidden = !ready || !resultsOpen();
+    $('grownups').hidden = !ready;
+  }
+
+  function renderGrownups() {
+    $('gu-people').replaceChildren(...S.people.map((p) => h('li', {},
+      h('span', {}, p.name),
+      h('button', { type: 'button', class: 'mini', 'aria-label': `Remove ${p.name}`, onclick: (e) => arm(e.currentTarget, 'Tap again', () => removePerson(p)) }, 'Remove'))));
+    $('gu-values').replaceChildren(...S.values.map((v) => h('li', { css: { '--vc': vcolor(v) } },
+      h('span', { class: 'dot', 'aria-hidden': 'true' }),
+      h('span', {}, vlabel(v)),
+      h('button', { type: 'button', class: 'mini', 'aria-label': `Remove ${v.name}`, onclick: (e) => arm(e.currentTarget, 'Tap again', () => removeValue(v)) }, '×'))));
+  }
+
+  function startVoting(pid) {
+    if (!S.store) return;
+    session = { pid, step: 'top', ...picksOf(pid), fresh: '', saved: false };
+    go('vote');
+  }
+
+  // Someone who has already voted sees their own picks; results open from there once everyone is in.
+  function showPicks(pid) {
+    session = { pid, step: 'top', ...picksOf(pid), fresh: '', saved: false };
+    go('done');
+  }
+
+  function renderVote() {
+    const p = session && S.people.find((x) => x.id === session.pid);
+    if (!p) { session = null; go('home'); return; }
+    const step = session.step;
+    const c = COPY[step];
+    const list = session[step];
+    const max = LIMIT[step];
+    const locked = step === 'more' ? session.top : [];
+    $('view-vote').dataset.step = step;
+    $('vote-who').replaceChildren(h('span', { css: { '--c': colorOf(p) } }, avatar(p, 'sm')), h('span', {}, p.name));
+    $('vote-step').textContent = c.step;
+    $('vote-q').textContent = c.q;
+    $('vote-help').textContent = c.help;
+    $('vote-top3').hidden = step !== 'more';
+    $('vote-top3-chips').replaceChildren(...valid(session.top).map(chip));
+
+    $('slots').replaceChildren(...slotEls(list, max, session.fresh, toggle));
+    session.fresh = '';
+    fillGrid($('values'), S.values.map((v) => {
+      const by = v.addedBy && S.people.find((x) => x.id === v.addedBy);
+      const isLocked = locked.includes(v.id);
+      return valueCard(v, {
+        pressed: list.includes(v.id), locked: isLocked, onClick: () => toggle(v.id),
+        sub: isLocked ? 'In your top 3' : v.meaning || (by ? `Added by ${by.name}` : 'Added by the family'),
+      });
+    }), list.length >= max);
+    if (!S.values.length) $('values').append(h('p', { class: 'empty' }, 'No values on the list yet. Add one below.'));
+    $('legend').hidden = !S.values.some((v) => v.christlike);
+
+    $('vote-count').textContent = `${list.length} of ${max} picked`;
+    $('vote-back').textContent = step === 'top' ? 'Names' : 'Back';
+    const next = $('vote-next');
+    next.textContent = S.saving ? 'Saving…' : c.next;
+    next.disabled = list.length !== max || S.saving;
+  }
+
+  function toggle(id) {
+    const step = session.step;
+    const list = session[step];
+    const max = LIMIT[step];
+    if (step === 'more' && session.top.includes(id)) { toast("That one's already in your top 3."); return; }
+    const i = list.indexOf(id);
+    if (i >= 0) list.splice(i, 1);
+    else if (list.length < max) {
+      list.push(id);
+      session.fresh = id;
+      if (step === 'top') session.more = session.more.filter((x) => x !== id);
+    } else { toast(`You have ${max} already. Tap one of your picks to take it off.`); return; }
+    renderVote();
+  }
+
+  async function nextStep() {
+    if (!session || session[session.step].length !== LIMIT[session.step] || S.saving) return;
+    S.saving = true;
+    renderVote();
+    const top = valid(session.top).slice(0, LIMIT.top);
+    const body = { top, more: valid(session.more).filter((id) => !top.includes(id)).slice(0, LIMIT.more), me: valid(session.me).slice(0, LIMIT.me) };
+    try { await S.store.savePicks(session.pid, body); }
+    catch (e) { S.saving = false; renderVote(); failed(e); return; }
+    S.saving = false;
+    const i = STEPS.indexOf(session.step);
+    if (i < STEPS.length - 1) { session.step = STEPS[i + 1]; renderVote(); window.scrollTo({ top: 0 }); }
+    else { session.saved = true; go('done'); }
+  }
+
+  function renderDone() {
+    const p = session && S.people.find((x) => x.id === session.pid);
+    if (!p) { session = null; go('home'); return; }
+    $('done-title').textContent = session.saved ? `Thanks, ${p.name}!` : `${p.name}'s picks`;
+    $('done-top').replaceChildren(...valid(session.top).map(chip));
+    $('done-more').replaceChildren(...valid(session.more).map(chip));
+    $('done-me').replaceChildren(...valid(session.me).map(chip));
+    const open = resultsOpen();
+    const k = S.people.filter((x) => isDone(x.id)).length;
+    $('done-results').hidden = !open;
+    $('done-wait').hidden = open;
+    $('done-wait').textContent = `Results open when everyone has voted. ${k} of ${S.people.length} so far.`;
+  }
+
+  function renderResults() {
+    const fin = finalIds();
+    const decided = fin.length === FINAL;
+    $('results-title').textContent = decided ? 'Our family values' : 'The votes are in';
+    const changing = S.people.filter((p) => !isDone(p.id));
+    $('results-count').textContent = changing.length
+      ? `Still changing their picks: ${names(changing)}. The results update as they go.`
+      : `All ${S.people.length} of us have voted. The results update if anyone changes their picks.`;
+    $('final-box').hidden = !decided;
+    $('final-sticks').replaceChildren(...fin.map((id) => stick(valueById.get(id), '', true)));
+
+    const { voters, rows, cut, winners } = familyRows();
+    // Values tied on points and top-3 picks share a place, so a tie at 3rd or 5th is named.
+    const keyAt = (place) => (rows.length >= place ? rows[place - 1].key : -1);
+    const tieAt = (place) => {
+      const k = keyAt(place);
+      const tied = rows.filter((r) => r.key === k);
+      return tied.length > 1 && rows.filter((r) => r.key > k).length < place && rows.filter((r) => r.key >= k).length > place ? tied : [];
+    };
+    const ordinal = (n) => n + (['th', 'st', 'nd', 'rd'][n] || 'th');
+    const andList = (a) => (a.length < 3 ? a.join(' and ') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]);
+    const groups = new Map();   // one note per tie, even when it covers both 3rd and 5th
+    [3, 5].forEach((place) => { const t = tieAt(place); if (t.length) groups.set(t[0].key, t); });
+    const ties = [...groups.values()].map((tied) => {
+      const place = rows.filter((r) => r.key > tied[0].key).length + 1;
+      return `${andList(tied.map((r) => r.v.name))} are tied for ${ordinal(place)} place.`;
+    });
+    $('tie-note').hidden = !ties.length;
+    $('tie-note').textContent = ties.join(' ');
+    $('podium').replaceChildren(...winners.map((r) => stick(r.v, pts(r.score), r.key >= keyAt(3))));
+    $('final-call-text').textContent = decided
+      ? 'These are our family values. If you decide differently later, you can change them.'
+      : 'Talk about the results together, then pick the 3 values that will be our family values.';
+    const gf = $('go-final');
+    gf.textContent = decided ? 'Change our final 3' : 'Pick our final 3';
+    gf.className = 'btn ' + (decided ? 'ghost' : 'primary');
+
+    $('family-tally').replaceChildren(...rows.map((r) => h('li', { class: 'trow' + (r.key >= cut ? ' top' : ''), css: { '--vc': vcolor(r.v) } },
+      h('div', { class: 'thead' }, h('span', { class: 'tname' }, vlabel(r.v)), h('span', { class: 'tnum' }, pts(r.score))),
+      h('div', { class: 'track' }, h('div', { class: 'fill', css: { width: `${(r.score / (voters.length * POINTS.top)) * 100}%` } })),
+      h('div', { class: 'tby' }, [r.top.length ? `Top 3: ${names(r.top)}` : '', r.more.length ? `2 more: ${names(r.more)}` : ''].filter(Boolean).join(' · ')))));
+
+    const head = (p) => h('div', { class: 'card-head' }, avatar(p, 'sm'), h('h4', {}, p.name));
+    $('family-each').replaceChildren(...S.people.map((p) => {
+      const f = picksOf(p.id);
+      return h('article', { class: 'box', css: { '--c': colorOf(p) } }, head(p),
+        h('p', { class: 'sub' }, 'Top 3'), h('ul', { class: 'chips' }, f.top.map(chip)),
+        h('p', { class: 'sub' }, '2 more'), h('ul', { class: 'chips small' }, f.more.map(chip)));
+    }));
+    $('each').replaceChildren(...S.people.map((p) => h('article', { class: 'box', css: { '--c': colorOf(p) } },
+      head(p), h('ul', { class: 'chips' }, picksOf(p.id).me.map(chip)))));
+  }
+
+  function openFinal() {
+    finalPick = finalIds();
+    go('final');
+  }
+
+  function renderFinal() {
+    const { rows, rank } = familyRows();
+    $('final-slots').replaceChildren(...slotEls(finalPick, FINAL, finalFresh, toggleFinal));
+    finalFresh = '';
+    const ordered = rows.map((r) => r.v).concat(S.values.filter((v) => !rank.has(v.id)));
+    fillGrid($('final-values'), ordered.map((v) => {
+      const r = rank.get(v.id);
+      return valueCard(v, {
+        pressed: finalPick.includes(v.id), onClick: () => toggleFinal(v.id),
+        sub: r ? pts(r.score) + (r.top.length ? ` · ${r.top.length} in a top 3` : '') : 'No votes',
+      });
+    }), finalPick.length >= FINAL);
+    $('final-legend').hidden = !S.values.some((v) => v.christlike);
+    $('final-count').textContent = `${finalPick.length} of ${FINAL} picked`;
+    const save = $('final-save');
+    save.textContent = S.saving ? 'Saving…' : 'Save';
+    save.disabled = finalPick.length !== FINAL || S.saving;
+  }
+
+  function toggleFinal(id) {
+    const i = finalPick.indexOf(id);
+    if (i >= 0) finalPick.splice(i, 1);
+    else if (finalPick.length < FINAL) { finalPick.push(id); finalFresh = id; }
+    else { toast(`You have ${FINAL} already. Tap one to take it off.`); return; }
+    renderFinal();
+  }
+
+  async function saveFinal() {
+    if (finalPick.length !== FINAL || S.saving) return;
+    S.saving = true;
+    renderFinal();
+    try { await S.store.setFinal(valid(finalPick)); }
+    catch (e) { S.saving = false; renderFinal(); failed(e); return; }
+    S.saving = false;
+    toast('Saved our family values');
+    go('results');
+  }
+
+  // ---------------------------------------------------------------- actions
+
+  async function addValue(raw, by) {
+    const name = tidy(raw, 28);
+    if (!name || !S.store) return null;
+    const existing = S.values.find((v) => v.name.toLowerCase() === name.toLowerCase());
+    if (existing) { toast(`${existing.name} is already on the list`); return existing.id; }
+    try {
+      const id = await S.store.addValue(name, by);
+      toast(`Added ${name}`);
+      return id;
+    } catch (e) { failed(e); return null; }
+  }
+
+  function removePerson(p) {
+    S.store.removePerson(p.id).then(() => toast(`Removed ${p.name}`), failed);
+  }
+  function removeValue(v) {
+    S.store.removeValue(v.id).then(() => toast(`Removed ${v.name}`), failed);
+  }
+
+  $('add-value').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!session) return;
+    const input = $('new-value');
+    const id = await addValue(input.value, session.pid);
+    if (!id || !session) return;
+    input.value = '';
+    if (view !== 'vote') return;
+    if (!session[session.step].includes(id)) toggle(id); else renderVote();
+  });
+  $('gu-add-value').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const input = $('gu-value-name');
+    if (await addValue(input.value, null)) input.value = '';
+  });
+  $('gu-add-person').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const input = $('gu-person-name');
+    const name = tidy(input.value, 20);
+    if (!name || !S.store) return;
+    if (S.people.some((p) => p.name.toLowerCase() === name.toLowerCase())) { toast(`${name} is already on the list`); return; }
+    try { await S.store.addPerson(name); }
+    catch (err) { failed(err); return; }
+    input.value = '';
+    toast(`Added ${name}`);
+  });
+  $('gu-clear').addEventListener('click', (e) => arm(e.currentTarget, 'Tap again to clear', () => {
+    S.store.clearVotes().then(() => toast('All votes cleared'), failed);
+  }));
+
+  $('vote-next').addEventListener('click', nextStep);
+  $('vote-back').addEventListener('click', () => {
+    const i = session ? STEPS.indexOf(session.step) : 0;
+    if (i > 0) { session.step = STEPS[i - 1]; renderVote(); window.scrollTo({ top: 0 }); }
+    else go('home');
+  });
+  $('vote-exit').addEventListener('click', () => go('home'));
+  $('go-results').addEventListener('click', () => go('results'));
+  $('results-back').addEventListener('click', () => go('home'));
+  $('done-next').addEventListener('click', () => { session = null; go('home'); });
+  $('done-results').addEventListener('click', () => go('results'));
+  $('done-edit').addEventListener('click', () => session && startVoting(session.pid));
+  $('go-final').addEventListener('click', openFinal);
+  $('final-exit').addEventListener('click', () => go('results'));
+  $('final-back').addEventListener('click', () => go('results'));
+  $('final-save').addEventListener('click', saveFinal);
+
+  go('home');
+  connect();
+})();
+</script>
+</body>
+</html>
