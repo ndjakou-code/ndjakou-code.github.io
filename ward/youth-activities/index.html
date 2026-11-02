@@ -247,19 +247,38 @@ main{max-width:980px;margin:0 auto;padding-top:16px;display:flex;flex-direction:
 .itext[role="button"]:hover .evt{text-decoration:underline}
 .addbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px}
 .addbar input{flex:1 1 220px;min-width:0;border:1px solid var(--line-2);border-radius:8px;background:var(--bg);padding:7px 9px}
+.arealegend{display:flex;gap:6px;flex-wrap:wrap}
+.abtn{position:relative;overflow:hidden;border:1px solid var(--line-2);border-radius:0 8px 8px 0;background:var(--surface);padding:5px 12px 5px 16px;font-size:13px;font-weight:600;color:var(--ink-2)}
+.abtn::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px}
+.abtn.a-spiritual::before{background:var(--a-spiritual)}.abtn.a-social::before{background:var(--a-social)}.abtn.a-physical::before{background:var(--a-physical)}.abtn.a-intellectual::before{background:var(--a-intellectual)}
+.abtn[aria-pressed="true"]{color:var(--ink);border-color:var(--ink-2)}
+.abtn.a-spiritual[aria-pressed="true"]{background:color-mix(in srgb,var(--a-spiritual) 16%,var(--surface))}
+.abtn.a-social[aria-pressed="true"]{background:color-mix(in srgb,var(--a-social) 16%,var(--surface))}
+.abtn.a-physical[aria-pressed="true"]{background:color-mix(in srgb,var(--a-physical) 16%,var(--surface))}
+.abtn.a-intellectual[aria-pressed="true"]{background:color-mix(in srgb,var(--a-intellectual) 18%,var(--surface))}
+@media (max-width:640px){.arealegend{width:100%;order:4}.abtn{flex:1;padding:6px 6px 6px 12px;font-size:12.5px}}
+body.ro .emp button,body.ro #ideaForm,body.ro [data-act="starter"],body.ro [data-act="plan-again"],body.ro [data-focus="date"],body.ro [data-act="add-fsy"],body.ro [data-act="plan-fsy"],body.ro [data-act="new"]{display:none!important}
+.hist{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow:auto}
+.hist li{border:1px solid var(--line);border-radius:0 8px 8px 0;border-left:4px solid var(--line-2);padding:7px 10px;font-size:13px}
+.hwhen{font-size:12px;color:var(--muted);margin-bottom:2px}
+.hk{font-weight:700}.hk.k-added{color:var(--ok)}.hk.k-deleted{color:var(--bad)}.hk.k-edited{color:var(--accent)}
+.hbtns{display:flex;gap:6px;margin-top:4px}
+.hbtns .mini{font-weight:600;color:var(--accent)}.hbtns .mini.armed{background:var(--bad);color:#fff}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
 <header class="top">
-  <div class="brand"><h1>Youth Activities</h1><span class="sync" id="sync">Connecting…</span></div>
+  <div class="brand"><h1>Youth Activities</h1></div>
   <div class="tabs" role="group" aria-label="View">
     <button type="button" data-view="calendar" aria-pressed="true">Calendar</button>
     <button type="button" data-view="balance" aria-pressed="false">Stats</button>
     <button type="button" data-view="ideas" aria-pressed="false">Ideas</button>
   </div>
+  <div class="arealegend" id="areaBar" role="group" aria-label="Show only these areas"></div>
   <div class="topright">
-    <button class="btn primary" type="button" data-act="new">+ New activity</button>
+    <button class="btn primary" type="button" data-act="new" id="newBtn">+ New activity</button>
+    <button class="btn primary" type="button" data-act="enter-pin" id="pinBtn" hidden>Enter PIN to edit</button>
     <button class="linkbtn" type="button" data-act="settings">Ward settings</button>
   </div>
 </header>
@@ -284,7 +303,12 @@ main{max-width:980px;margin:0 auto;padding-top:16px;display:flex;flex-direction:
         <p class="muted">Share this link and the PIN with leaders, the bishopric and youth presidencies.</p>
         <div class="inrow"><input id="wardLink" class="linkout" readonly aria-label="Your ward link"><button class="btn" type="button" data-act="copy-link">Copy</button></div>
       </div>
-      <div>
+      <div id="roSec" hidden>
+        <h3 class="eyebrow">Editing</h3>
+        <p class="muted">You're viewing. Enter the ward PIN to add or change activities.</p>
+        <button class="btn primary" type="button" data-act="enter-pin">Enter PIN to edit</button>
+      </div>
+      <div id="groupsSec">
         <h3 class="eyebrow">Groups</h3>
         <p class="muted">One per line, as you want them to appear (classes, quorums, combined).</p>
         <textarea id="groupsText" aria-label="Groups"></textarea>
@@ -296,7 +320,14 @@ main{max-width:980px;margin:0 auto;padding-top:16px;display:flex;flex-direction:
         <div class="inrow"><input id="newPin" type="password" inputmode="numeric" autocomplete="off" placeholder="New PIN" aria-label="New PIN"><input id="newPin2" type="password" inputmode="numeric" autocomplete="off" placeholder="Again" aria-label="New PIN again"><button class="btn primary" type="submit">Change</button></div>
         <p class="err" id="pinErr" role="alert"></p>
       </form>
-      <div>
+      <div id="histSec">
+        <h3 class="eyebrow">Change history (owner only)</h3>
+        <p class="muted">Every change is kept so the owner can undo mistakes or vandalism.</p>
+        <form class="inrow" id="ownerForm"><input id="ownerPin" type="password" inputmode="numeric" autocomplete="off" placeholder="Owner PIN" aria-label="Owner PIN"><button class="btn" type="submit">Open history</button></form>
+        <p class="err" id="ownerErr" role="alert"></p>
+        <div id="histList"></div>
+      </div>
+      <div id="forgetSec">
         <h3 class="eyebrow">This phone</h3>
         <button class="btn" type="button" data-act="forget">Forget the PIN on this phone</button>
       </div>
@@ -315,6 +346,7 @@ main{max-width:980px;margin:0 auto;padding-top:16px;display:flex;flex-direction:
       <input id="gatePin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN" aria-label="PIN">
       <button class="btn primary" type="submit">Open planner</button>
       <p class="err" id="gateErr" role="alert"></p>
+      <button class="linkbtn" type="button" id="gateView" hidden>Just view</button>
       <button class="linkbtn" type="button" id="gateOther" hidden>Open a different ward</button>
     </form>
     <form class="panel gate-card" id="regForm">
@@ -371,7 +403,7 @@ const FSY_IDEAS=[
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const state={activities:new Map(),ideas:new Map(),meta:{},ready:false,view:"calendar",group:"",when:"all",areas:new Set(),period:"term",bank:"all",editing:null,layout:(()=>{try{return localStorage.getItem("youth-activities-layout")||"grid";}catch(e){return "grid";}})()};
-let ward=null,pin=null,rev=0,pending=[],flushing=false,flushTimer=0,loading=false;
+let ward=null,pin=null,owner=null,rev=0,pending=[],flushing=false,flushTimer=0,loading=false;
 const PIN_KEY="youth-activities-pin",WARD_KEY="youth-activities-ward";
 
 /* ---------- small helpers ---------- */
@@ -382,6 +414,7 @@ const todayIso=()=>{const d=new Date();return d.getFullYear()+"-"+pad(d.getMonth
 const addMonths=(iso,m)=>{const d=new Date(iso+"T12:00:00");d.setMonth(d.getMonth()+m);return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());};
 const dateObj=iso=>new Date(iso+"T12:00:00");
 const groups=()=>(state.meta.groups&&state.meta.groups.length)?state.meta.groups:DEFAULT_GROUPS;
+const orderedAreas=x=>AREAS.map(([k])=>k).filter(k=>(x.areas||[]).includes(k));
 const areaName=a=>(AREAS.find(x=>x[0]===a)||[,a])[1];
 const statusName=s=>(STATUSES.find(x=>x[0]===s)||[,s])[1];
 function copyText(txt,input){const fb=()=>{if(input){input.focus();input.select();}toast("Press Ctrl+C (or ⌘C) to copy.");};try{navigator.clipboard.writeText(txt).then(()=>toast("Link copied."),fb);}catch(e){fb();}}
@@ -398,7 +431,9 @@ function setWard(code){
 const wardLink=()=>location.origin+location.pathname+"#"+ward;
 async function api(fn,args){
   let r;
-  try{r=await fetch(API_URL,{method:"POST",body:JSON.stringify({fn,args:args||[],ward,pin}),redirect:"follow"});}
+  // Without a PIN the planner is view-only and reads through the public calls.
+  if(state.readOnly&&(fn==="getAll"||fn==="getRev"))fn+="Public";
+  try{r=await fetch(API_URL,{method:"POST",body:JSON.stringify({fn,args:args||[],ward,pin:state.readOnly?"":pin,owner}),redirect:"follow"});}
   catch(e){throw{code:"net",message:"No connection"};}
   if(!r.ok)throw{code:"net",message:"Server error "+r.status};
   let j;try{j=await r.json();}catch(e){throw{code:"net",message:"Unexpected reply"};}
@@ -407,7 +442,8 @@ async function api(fn,args){
 }
 const authError=err=>err&&(err.code==="pin"||err.code==="locked"||err.code==="noward");
 function apiFailed(err){
-  if(authError(err)){savePin(null);if(err.code==="noward")setWard(null);showGate(err.message);return;}
+  if(err&&err.code==="noward"){savePin(null);setWard(null);showGate(err.message);return;}
+  if(authError(err)){savePin(null);pin=null;state.readOnly=true;toast("That PIN no longer works, so the planner is view-only. Enter the PIN to edit.");loadAll().catch(()=>{});return;}
   toast(err&&err.code==="net"?"Can't reach the planner. Check your connection; your last change may not have saved.":"A change didn't save: "+(err&&err.message||"unknown error"));
   loadAll().catch(()=>{});
 }
@@ -431,10 +467,11 @@ async function loadAll(){
     state.meta=(all.meta&&all.meta.ward)||{};
     rev=all.rev||0;state.ready=true;
     render();
-    moveIdeasToActivities();
+    if(!state.readOnly)moveIdeasToActivities();
   }finally{loading=false;}
 }
 function put(col,id,body){
+  if(state.readOnly){toast("Enter the PIN to make changes.");return;}
   const map=col==="activities"?state.activities:col==="ideas"?state.ideas:null;
   if(map){if(body)map.set(id,body);else map.delete(id);}
   pending.push({col,id,body:body||null});
@@ -451,7 +488,7 @@ async function flush(){
   if(pending.length)flush();
 }
 async function poll(){
-  if(!pin||!ward||!state.ready||pending.length||flushing||loading||document.visibilityState!=="visible")return;
+  if(!ward||!state.ready||pending.length||flushing||loading||document.visibilityState!=="visible")return;
   if(!$("#editModal").hidden)return;            // don't refresh under someone mid-edit
   try{const r=await api("getRev");if(r!==rev)await loadAll();}
   catch(err){if(authError(err))apiFailed(err);}
@@ -462,7 +499,9 @@ document.addEventListener("visibilitychange",poll);
 /* ---------- render ---------- */
 function render(){
   document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.view===state.view)));
-  const s=$("#sync");s.className="sync"+(state.ready?" live":"");s.textContent=state.ready?"Shared with your ward":"Connecting…";
+  $("#areaBar").innerHTML=AREAS.map(([a,l])=>`<button class="abtn a-${a}" type="button" data-act="filter-area" data-area="${a}" aria-pressed="${state.areas.has(a)}">${l}</button>`).join("");
+  document.body.classList.toggle("ro",!!state.readOnly);
+  $("#newBtn").hidden=!!state.readOnly;$("#pinBtn").hidden=!state.readOnly||!state.ready;
   const m=$("#main");
   if(!state.ready){m.innerHTML=`<div class="panel empty"><p>Loading…</p></div>`;return;}
   m.innerHTML=state.view==="balance"?renderBalance():state.view==="ideas"?renderIdeas():renderCalendar();
@@ -503,7 +542,7 @@ function evCell(list,colspan){
   if(!list.length)return "";
   const a0=list[0][1],ar=(a0.areas||[])[0];
   return `<td${colspan>1?` colspan="${colspan}"`:""} class="ev${ar?" a-"+ar:""}">${list.map(([id,a])=>{
-    const ars=(a.areas||[]).filter(x=>AREAS.some(([k])=>k===x));
+    const ars=orderedAreas(a);
     return `<button class="evb st-${esc(a.status||"planned")}" style="--n:${Math.max(1,ars.length)}" type="button" data-act="edit" data-id="${esc(id)}"><span class="evs" aria-hidden="true">${ars.length?ars.map(x=>`<i class="${x}"></i>`).join(""):"<i></i>"}</span><span class="evt">${esc(a.title||"Untitled")}</span><span class="evm">${esc(statusName(a.status||"planned"))}${colspan>1||!cols_.includes(a.group)?" · "+esc(a.group):""}</span></button>`;}).join("")}</td>`;
 }
 let cols_=[];
@@ -550,7 +589,6 @@ function renderCalendar(){
   let h=`<div class="filters">
     <select id="fGroup" aria-label="Group">${groupOptions(state.group,"All groups")}</select>
     <select id="fWhen" aria-label="When"><option value="upcoming"${state.when==="upcoming"?" selected":""}>Upcoming (${nUp})</option><option value="past"${state.when==="past"?" selected":""}>Past (${nPast})</option><option value="all"${state.when==="all"?" selected":""}>All dates (${nUp+nPast})</option></select>
-    ${areaChips(state.areas,"filter-area")}
     <div class="lay" role="group" aria-label="Layout"><button type="button" data-act="layout" data-layout="grid" aria-pressed="${state.layout==="grid"}">Grid</button><button type="button" data-act="layout" data-layout="list" aria-pressed="${state.layout!=="grid"}">List</button></div>
   </div>`;
   if(!dated.length){
@@ -564,13 +602,13 @@ function renderCalendar(){
     const mk=d.toLocaleDateString(undefined,{month:"long",year:"numeric"});
     if(mk!==month){if(month)h+=`</div></section>`;month=mk;h+=`<section class="month"><h2>${esc(mk)}</h2><div class="cards">`;}
     const checks=a.checks||[];const doneN=checks.filter(c=>c.d).length;
-    const ar=(a.areas||[]).filter(x=>AREAS.some(([k])=>k===x));
+    const ar=orderedAreas(a);
     h+=`<button class="card${a.status==="cancelled"?" cancelled":""}${ar.length?" a-"+ar[0]:""}" style="--n:${Math.max(1,ar.length)}" type="button" data-act="edit" data-id="${esc(id)}">
       <span class="stripe" aria-hidden="true">${ar.length?ar.map(x=>`<span class="${x}"></span>`).join(""):`<span></span>`}</span>
       <div class="when"><div class="d">${d.getDate()}</div><div class="w">${esc(d.toLocaleDateString(undefined,{weekday:"short"}))}</div></div>
       <div><p class="ctitle">${esc(a.title||"Untitled")}</p>
         <div class="cmeta">${linksOf(a).length?`<span>${linksOf(a).length} link${linksOf(a).length>1?"s":""}</span>`:""}${a.location?`<span>${esc(a.location)}</span>`:""}${a.planning?`<span>Planning: ${esc(a.planning)}</span>`:""}</div>
-        <div class="ctags"><span class="tag">${esc(a.group||"")}</span>${(a.areas||[]).map(x=>`<span class="tag"><span class="dot ${x}" style="width:8px;height:8px;border-radius:50%;display:inline-block"></span>${areaName(x)}</span>`).join("")}</div>
+        <div class="ctags"><span class="tag">${esc(a.group||"")}</span>${orderedAreas(a).map(x=>`<span class="tag"><span class="dot ${x}" style="width:8px;height:8px;border-radius:50%;display:inline-block"></span>${areaName(x)}</span>`).join("")}</div>
       </div>
       <div class="cside"><span class="status st-${esc(a.status||"planned")}">${esc(statusName(a.status||"planned"))}</span>${checks.length?`<span class="prog${doneN<checks.length&&a.status!=="done"&&a.status!=="cancelled"?" todo":""}">${doneN}/${checks.length} ready</span>`:""}</div>
     </button>`;
@@ -612,11 +650,11 @@ function renderBalance(){
 /** One compact idea block, styled like an event in the calendar grid. */
 /** One compact block, styled like an event in the calendar grid. */
 function ideaBlock(i,meta,actions,editId){
-  const ars=(i.areas||[]).filter(x=>AREAS.some(([k])=>k===x));
+  const ars=orderedAreas(i);
   return `<div class="ideab${ars.length?" a-"+ars[0]:""}" style="--n:${Math.max(1,ars.length)}"><span class="evs" aria-hidden="true">${ars.length?ars.map(x=>`<i class="${x}"></i>`).join(""):"<i></i>"}</span>
     <div class="itext"${editId?` role="button" tabindex="0" data-act="edit" data-id="${esc(editId)}" title="Edit"`:""}><span class="evt">${esc(i.title)}</span><span class="evm">${meta}</span>${i.notes?`<span class="inote">${esc(i.notes)}</span>`:""}</div><div class="iact">${actions}</div></div>`;
 }
-const areaList=i=>(i.areas||[]).map(areaName).join(" · ")||"No area yet";
+const areaList=i=>orderedAreas(i).map(areaName).join(" · ")||"No area yet";
 const fmtShort=iso=>{const d=dateObj(iso);return d.toLocaleDateString(undefined,{day:"numeric",month:"short",...(d.getFullYear()!==new Date().getFullYear()?{year:"numeric"}:{})});};
 /** Where an activity is in its life: unplanned (no date), planned, done or cancelled. */
 function lifeOf(a){
@@ -643,7 +681,7 @@ function renderIdeas(){
       if(lx==="unplanned")return String(x[1].title).localeCompare(y[1].title);return lx==="planned"?x[1].date.localeCompare(y[1].date):y[1].date.localeCompare(x[1].date);});
   const count=k=>all.filter(([,a])=>lifeOf(a)[0]===k).length;
   let h=`<form class="panel addbar" id="ideaForm"><input id="ideaTitle" maxlength="120" placeholder="Add an idea (no date yet)" autocomplete="off" aria-label="New idea"><div class="areas" id="ideaAreas">${areaChips(state.newIdeaAreas||new Set(),"idea-area")}</div><button class="btn primary" type="submit">Add</button></form>
-    <div class="filters"><div class="lay" style="margin-left:0" role="group" aria-label="Show">${BANK_FILTERS.map(([k,l])=>`<button type="button" data-act="bank" data-k="${k}" aria-pressed="${state.bank===k}">${l} (${k==="all"?all.length:count(k)})</button>`).join("")}</div>${areaChips(state.areas,"filter-area")}</div>`;
+    <div class="filters"><div class="lay" style="margin-left:0" role="group" aria-label="Show">${BANK_FILTERS.map(([k,l])=>`<button type="button" data-act="bank" data-k="${k}" aria-pressed="${state.bank===k}">${l} (${k==="all"?all.length:count(k)})</button>`).join("")}</div></div>`;
   if(!all.length)return h+`<div class="panel empty"><h2>No ideas yet</h2><p>Start with ${STARTER_IDEAS.length} suggestions across the four areas, then add your own.</p><button class="btn primary" type="button" data-act="starter">Add starter ideas</button></div>`+fsySection();
   if(!list.length)return h+`<div class="panel empty"><p>Nothing matches these filters.</p></div>`+fsySection();
   return h+`<section><div class="ideagrid">${list.map(([id,a])=>{const[k,label]=lifeOf(a);
@@ -680,6 +718,7 @@ function openIdeaEditor(id){
   $("#editModal").hidden=false;
 }
 function drawEditor(){
+  setTimeout(lockEditor,0);
   const e=state.editing,a=e.a;
   if(e.kind==="idea"){
     $("#editBody").innerHTML=`
@@ -706,6 +745,14 @@ function drawEditor(){
       <div class="addcheck"><input id="newCheck" maxlength="60" placeholder="Add a checklist item" aria-label="New checklist item"><button class="btn" type="button" data-act="add-check">Add</button></div></div>
     <div class="formbtns">${e.id?`<button class="btn danger" type="button" data-act="del-activity">Delete</button>`:""}${e.id&&a.date?`<button class="btn" type="button" data-act="plan-again" data-id="${esc(e.id)}">Plan again</button>`:""}<button class="btn" type="button" data-act="close-edit">Cancel</button><button class="btn primary" type="submit">Save</button></div>`;
 }
+/** View-only: show the details but nothing can be changed. */
+function lockEditor(){
+  if(!state.readOnly)return;
+  $("#editTitle").textContent="Activity details";
+  $("#editBody").querySelectorAll("input,select,textarea,button").forEach(el=>{if(el.dataset.act!=="close-edit")el.disabled=true;});
+  $("#editBody").querySelectorAll(".addcheck,.formbtns .btn:not([data-act=close-edit]),.x").forEach(el=>el.hidden=true);
+  const c=$("#editBody").querySelector('[data-act="close-edit"]');if(c)c.textContent="Close";
+}
 function readEditor(){
   const e=state.editing;
   const pending=$("#newLink")&&normLink($("#newLink").value);
@@ -729,6 +776,10 @@ document.addEventListener("click",e=>{
   const act=b.dataset.act;
   switch(act){
     case"view":state.view=b.dataset.view;render();return;
+    case"enter-pin":$("#setModal").hidden=true;showGate("");return;
+    case"undo-one":case"undo-from":{
+      if(!b.classList.contains("armed")){b.classList.add("armed");const t=b.textContent;b.textContent="Confirm";setTimeout(()=>{if(b.isConnected){b.classList.remove("armed");b.textContent=t;}},3500);return;}
+      undo(+b.dataset.n,act==="undo-from"?"from":"one");return;}
     case"show-past":state.when="past";render();return;
     case"layout":state.layout=b.dataset.layout;try{localStorage.setItem("youth-activities-layout",state.layout);}catch(err){}render();return;
     case"new-at":openEditor(null,{date:b.dataset.date,group:b.dataset.group});return;
@@ -762,7 +813,7 @@ document.addEventListener("click",e=>{
       if(!b.classList.contains("armed")){b.classList.add("armed");b.textContent="Confirm";setTimeout(()=>{if(b.isConnected){b.classList.remove("armed");b.textContent="Remove";}},3500);return;}
       put("ideas",b.dataset.id,null);return;}
     case"starter":STARTER_IDEAS.forEach(([title,areas])=>put("activities",newId(),unplanned(title,areas,"",[])));toast(STARTER_IDEAS.length+" ideas added.");return;
-    case"settings":$("#wardLink").value=wardLink();$("#groupsText").value=groups().join("\n");$("#setModal").hidden=false;return;
+    case"settings":["groupsSec","pinForm","histSec","forgetSec"].forEach(x=>$("#"+x).hidden=!!state.readOnly);$("#roSec").hidden=!state.readOnly;$("#wardLink").value=wardLink();$("#groupsText").value=groups().join("\n");$("#setModal").hidden=false;return;
     case"close-settings":$("#setModal").hidden=true;return;
     case"copy-link":copyText(wardLink(),$("#wardLink"));return;
     case"save-groups":{const g=[...new Set($("#groupsText").value.split(/\n/).map(s=>s.trim()).filter(Boolean))];if(!g.length){toast("Add at least one group.");return;}
@@ -784,7 +835,7 @@ document.addEventListener("keydown",e=>{
 });
 let b=null;
 $("#editForm").addEventListener("submit",e=>{
-  e.preventDefault();readEditor();
+  e.preventDefault();if(state.readOnly){closeEditor();return;}readEditor();
   const a=state.editing.a;
   if(state.editing.kind==="idea"){
     if(!a.title){toast("Give the idea a name.");$("#fTitle").focus();return;}
@@ -814,6 +865,7 @@ function showGate(msg){
   $("#gateHead").textContent=known?"Enter your ward PIN":"Open your ward";
   $("#gateText").textContent=known?"Ward "+ward+". You only need to do this once on this phone.":"Enter the ward code from your link, and your PIN.";
   $("#gateErr").textContent=msg||"";$("#gatePin").value="";
+  $("#gateView").hidden=!(known&&state.ready);
   setTimeout(()=>(known?$("#gatePin"):$("#gateCode")).focus(),50);
 }
 $("#gateForm").addEventListener("submit",async e=>{
@@ -824,11 +876,14 @@ $("#gateForm").addEventListener("submit",async e=>{
   try{
     pin=v;const code=known||normCode($("#gateCode").value);
     if(!code)throw{code:"noward",message:"Enter the ward code from your link."};
-    ward=code;await loadAll();setWard(code);savePin(v);$("#gate").hidden=true;
+    ward=code;const wasRO=state.readOnly;state.readOnly=false;
+    try{await loadAll();}catch(err){state.readOnly=wasRO;throw err;}
+    setWard(code);savePin(v);$("#gate").hidden=true;render();toast("You can edit now.");
   }catch(err){ward=known;$("#gateErr").textContent=gateMsg(err);}
   finally{btn.disabled=false;btn.textContent="Open planner";}
 });
 $("#gateOther").addEventListener("click",()=>{setWard(null);showGate();});
+$("#gateView").addEventListener("click",()=>{$("#gate").hidden=true;});
 $("#regForm").addEventListener("submit",async e=>{
   e.preventDefault();
   const a=$("#regPin").value.trim(),c=$("#regPin2").value.trim();
@@ -841,7 +896,7 @@ $("#regForm").addEventListener("submit",async e=>{
   finally{btn.disabled=false;btn.textContent="Set up ward";}
 });
 $("#regCopy").addEventListener("click",()=>copyText(wardLink(),$("#regLink")));
-$("#regOpen").addEventListener("click",async()=>{try{await loadAll();$("#gate").hidden=true;}catch(err){showGate(gateMsg(err));}});
+$("#regOpen").addEventListener("click",async()=>{state.readOnly=false;try{await loadAll();$("#gate").hidden=true;}catch(err){showGate(gateMsg(err));}});
 $("#pinForm").addEventListener("submit",async e=>{
   e.preventDefault();
   const a=$("#newPin").value.trim(),c=$("#newPin2").value.trim();
@@ -850,6 +905,28 @@ $("#pinForm").addEventListener("submit",async e=>{
   try{await api("changePin",[a]);pin=a;savePin(a);$("#newPin").value=$("#newPin2").value="";$("#pinErr").textContent="";toast("PIN changed. Tell everyone the new PIN.");}
   catch(err){$("#pinErr").textContent=gateMsg(err);}
 });
+
+/* ---------- owner: change history and undo ---------- */
+const kindWord={added:"Added",deleted:"Deleted",edited:"Edited"};
+function drawHistory(list){
+  $("#histList").innerHTML=list.length?`<ul class="hist">${list.map(h=>`<li><div class="hwhen">${esc(new Date(h.t).toLocaleString(undefined,{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}))}${h.note?" · "+esc(h.note):""}</div>
+    <div class="hwhat">${h.changes.map(c=>`<span class="hk k-${c.kind}">${kindWord[c.kind]}</span> ${esc(c.kind==="added"?c.after:(c.before||c.after||"(untitled)"))}${c.kind==="edited"&&c.after&&c.after!==c.before?" → "+esc(c.after):""}`).join("<br>")}</div>
+    <div class="hbtns"><button class="mini" type="button" data-act="undo-one" data-n="${h.n}">Undo</button><button class="mini" type="button" data-act="undo-from" data-n="${h.n}">Undo everything from here</button></div></li>`).join("")}</ul>`:`<p class="muted">No changes recorded yet.</p>`;
+}
+async function openHistory(){
+  $("#ownerErr").textContent="";
+  try{drawHistory(await api("getHistory"));$("#ownerForm").hidden=true;}
+  catch(err){
+    if(err.code==="noowner"){$("#ownerErr").textContent="";$("#histList").innerHTML=`<p class="muted">This ward has no owner PIN yet. The PIN you just typed (6 to 12 digits) will become the owner PIN.</p><button class="btn" type="button" id="claimOwner">Make this the owner PIN</button>`;
+      $("#claimOwner").onclick=async()=>{try{await api("setOwnerPin",[owner]);openHistory();}catch(e2){$("#ownerErr").textContent=gateMsg(e2);}};return;}
+    owner=null;$("#ownerErr").textContent=gateMsg(err);
+  }
+}
+async function undo(n,mode){
+  try{const r=await api("undo",[n,mode]);toast(r.restored?"Restored "+r.restored+(r.restored===1?" item.":" items."):"Nothing needed restoring.");await loadAll();openHistory();}
+  catch(err){toast(gateMsg(err));}
+}
+$("#ownerForm").addEventListener("submit",e=>{e.preventDefault();owner=$("#ownerPin").value.trim();if(owner)openHistory();});
 
 /* ---------- start ---------- */
 render();
@@ -860,7 +937,7 @@ window.addEventListener("hashchange",()=>location.reload());
   if(code)setWard(code);
   if(!ward){showGate();return;}
   pin=getPin();
-  if(!pin){showGate();return;}
+  state.readOnly=!pin;
   loadAll().catch(err=>{if(authError(err))apiFailed(err);else toast("Can't reach the planner. Check your connection, then reload.");});
 })();
 })();
