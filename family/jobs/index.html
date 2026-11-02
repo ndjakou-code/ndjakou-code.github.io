@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Family Jobs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+  :root {
+    --bg: #f6f4ef; --card: #ffffff; --ink: #1f1d1a; --muted: #6b665e; --line: #e3ded4;
+    --accent: #2f6df6; --accent-ink: #ffffff; --warn: #b45309; --warn-bg: #fff4e0;
+    --busy: #b91c1c; --busy-bg: #fde8e8; --cover: #0f766e; --cover-bg: #e0f5f2;
+    --backup: #1d4ed8; --backup-bg: #e3ebff; --today: #fff7cc;
+    --c-k0: #dc2626; --c-k1: #db2777; --c-k2: #16a34a; --c-k3: #2563eb; --c-k4: #d97706; --c-k5: #0d9488;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17181b; --card: #222428; --ink: #f1efe9; --muted: #a39e94; --line: #34373d;
+      --accent: #6b9bff; --accent-ink: #0b1020; --warn: #fbbf24; --warn-bg: #3a2a08;
+      --busy: #fca5a5; --busy-bg: #4a1d1d; --cover: #5eead4; --cover-bg: #0f3d38;
+      --backup: #9db8ff; --backup-bg: #1e2b4d; --today: #3d3612;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--ink); font: 16px/1.4 "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  button, select, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; }
+  .brand { font-weight: 700; font-size: 20px; }
+  .me { color: var(--muted); font-size: 14px; display: flex; align-items: center; gap: 6px; }
+  .me select { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+
+  .tabs { display: flex; gap: 4px; padding: 0 12px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg); z-index: 5; }
+  .tabs button { flex: 1; background: none; border: 0; border-bottom: 3px solid transparent; padding: 10px 4px; color: var(--muted); font-weight: 600; }
+  .tabs button.active { color: var(--ink); border-bottom-color: var(--accent); }
+
+  main { max-width: 820px; margin: 0 auto; padding: 16px; }
+  .loading, .error { text-align: center; color: var(--muted); padding: 40px 0; }
+  .error { color: var(--busy); }
+
+  .nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+  .nav h2 { margin: 0; font-size: 18px; text-align: center; flex: 1; }
+  .nav .sub { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
+  .btn { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  .btn.small { padding: 5px 10px; font-size: 14px; }
+  .btn.danger { color: var(--busy); }
+  .btn[disabled] { opacity: .5; cursor: default; }
+
+  .banner { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 12px; margin-bottom: 12px; }
+  .banner.backup { background: var(--backup-bg); color: var(--backup); font-weight: 600; }
+  .banner.busy { background: var(--busy-bg); color: var(--busy); }
+  .banner .grow { flex: 1; }
+
+  .cards { display: grid; gap: 10px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; }
+  .card .icon { font-size: 30px; width: 40px; text-align: center; }
+  .card .job { font-size: 20px; font-weight: 700; color: var(--ink); line-height: 1.3; }
+  .card .job .jicon { font-size: 24px; line-height: 1; vertical-align: -2px; }
+  .card .who { font-size: inherit; font-weight: inherit; }
+  .card .grow { flex: 1; min-width: 0; }
+  .card .sub { margin-top: 6px; }
+  .card.mine { outline: 2px solid var(--accent); }
+  .card.cover .who { color: var(--cover); }
+  .tag { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+  .tag.cover { background: var(--cover-bg); color: var(--cover); }
+  .tag.busy { background: var(--busy-bg); color: var(--busy); white-space: nowrap; }
+  .card .who .was { color: var(--muted); font-weight: 500; }
+  .tag.backup { background: var(--backup-bg); color: var(--backup); font-size: 16px; padding: 5px 12px; line-height: 1.3; }
+
+  .chip { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 4px 10px; font-weight: 600; font-size: 14px; background: var(--card); border: 1px solid var(--line); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; background: var(--muted); }
+  .dot.k0 { background: var(--c-k0); } .dot.k1 { background: var(--c-k1); } .dot.k2 { background: var(--c-k2); }
+  .dot.k3 { background: var(--c-k3); } .dot.k4 { background: var(--c-k4); } .dot.k5 { background: var(--c-k5); }
+
+  .tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+  table.grid { border-collapse: collapse; width: 100%; min-width: 640px; }
+  table.grid th, table.grid td { border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); padding: 8px 6px; text-align: center; vertical-align: middle; }
+  table.grid th:first-child, table.grid td:first-child { text-align: left; position: sticky; left: 0; background: var(--card); min-width: 130px; font-weight: 600; }
+  table.grid tr:last-child td { border-bottom: 0; }
+  table.grid th:last-child, table.grid td:last-child { border-right: 0; }
+  table.grid th.day { cursor: pointer; }
+  table.grid th.day .d { display: block; font-weight: 700; }
+  table.grid th.day .n { display: block; font-size: 12px; color: var(--muted); font-weight: 400; }
+  table.grid th.day.today, table.grid td.today { background: var(--today); }
+  table.grid td.cell { cursor: pointer; }
+  table.grid td .name { font-weight: 600; }
+  table.grid td .for { display: block; font-size: 11px; color: var(--cover); }
+  table.grid td .bk { display: block; font-size: 14px; font-weight: 600; color: var(--backup); }
+  table.grid td.cover .name { color: var(--cover); }
+  table.grid td.fallback .name { color: var(--warn); }
+  table.grid tr.backup td { background: var(--backup-bg); color: var(--backup); }
+  table.grid tr.backup td:first-child { background: var(--backup-bg); }
+  table.grid td .busyline { display: block; font-size: 11px; color: var(--busy); }
+  .legend { color: var(--muted); font-size: 13px; margin-top: 10px; }
+  .legend span { margin-right: 12px; }
+
+  .section { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+  .section h3 { margin: 0 0 10px; font-size: 16px; }
+  .section p.help { color: var(--muted); font-size: 13px; margin: 6px 0 10px; }
+  .field { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .field label { color: var(--muted); font-size: 14px; }
+  .field input, .field select, .field textarea { width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+  .field.full { grid-template-columns: 1fr; }
+  .checks { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  .checks label { display: inline-flex; align-items: center; gap: 6px; background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 5px 10px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .note { color: var(--muted); font-size: 13px; }
+  .note.warn { color: var(--warn); background: var(--warn-bg); padding: 8px 10px; border-radius: 8px; }
+  .ok { color: var(--cover); }
+
+  .sheet-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: flex-end; justify-content: center; z-index: 20; }
+  .sheet { background: var(--card); border-radius: 18px 18px 0 0; width: 100%; max-width: 560px; padding: 16px; max-height: 88vh; overflow: auto; }
+  .sheet h3 { margin: 0 0 4px; }
+  .sheet .who-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
+  .sheet .who-list button { border: 2px solid var(--line); background: var(--bg); border-radius: 12px; padding: 12px; font-weight: 600; font-size: 16px; }
+  .sheet .who-list button.busy { border-color: var(--busy); background: var(--busy-bg); color: var(--busy); }
+  .sheet .preview { font-size: 14px; color: var(--muted); margin: 8px 0 12px; }
+  .sheet .preview b { color: var(--cover); }
+  .sheet .actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+  .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; z-index: 30; max-width: 90vw; font-size: 14px; white-space: pre-line; }
+  .toast.err { background: var(--busy); color: #fff; }
+
+  @media (max-width: 480px) {
+    .brand { font-size: 18px; }
+    .field { grid-template-columns: 1fr; }
+    .card .who { font-size: 20px; }
+  }
+</style>
+
+</head>
+<body>
+  <header class="top">
+    <div class="brand">🧹 Family Jobs</div>
+    <label class="me">I am
+      <select id="meSelect"></select>
+    </label>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button data-view="today" class="active">Today</button>
+    <button data-view="week">Week</button>
+    <button data-view="rota">Rota</button>
+    <button data-view="settings">Settings</button>
+  </nav>
+
+  <main id="main"><div class="loading">Loading…</div></main>
+
+  <div class="sheet-backdrop" id="sheetBackdrop" hidden>
+    <div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <script>
+/*
+ * RotaLib — the rota rules. One file, three homes:
+ *   - served to the browser (Index.html includes it) so the UI can draw any week instantly
+ *   - loaded by Code.gs on the server (for Calendar sync and emails)
+ *   - loaded by test/rota.test.js under node
+ * Keep it plain JS with no Apps Script or DOM APIs.
+ */
+var Rota = (function () {
+  'use strict';
+
+  // The job list IS the rotation: each child moves one place along it every Monday.
+  // Order set on 21 Sep 2026: High, Easy, Medium, Easy, High, Medium, so no two hard
+  // weeks touch. The `backup` field names the job whose holder is that job's backup.
+  // Since 12 Oct 2026 the Floors, Bathrooms and Washing holders are the backups: each
+  // covers one heavier job and one of the other light jobs, so Washing Up, Table &
+  // Sides and Dishwasher holders have no backup duty. A job is never backed by the
+  // holder of the job one place before it, because that child did this job last week
+  // (rule of 19 Oct 2026).
+  var JOBS = [
+    { id: 'washing-up', name: 'Washing Up',               icon: '🧽', load: 'High',   backup: 'bathrooms' },
+    { id: 'floors',     name: 'Floors',                   icon: '🧹', load: 'Easy',   backup: 'washing' },
+    { id: 'surfaces',   name: 'Table & Sides & Sofas',    icon: '🛋️', load: 'Medium', backup: 'washing' },
+    { id: 'bathrooms',  name: 'Bathrooms',                icon: '🚿', load: 'Easy',   backup: 'floors' },
+    { id: 'dishwasher', name: 'Dishwasher and Drying Up', icon: '🍽️', load: 'High',   backup: 'floors' },
+    { id: 'washing',    name: 'Washing',                  icon: '👕', load: 'Medium', backup: 'bathrooms' }
+  ];
+
+  // The children in rotation order: child i holds JOBS[i - weekOffset] in week 0.
+  // Deliberately empty here: this file is published with the GitHub Pages copy, so the
+  // names live only in Code.gs, which fills them in with setKids() and sends them to
+  // the page in getBootstrap.
+  var KIDS = [];
+
+  /** Replace the children list in place, so every holder of Rota.KIDS sees it. */
+  function setKids(list) {
+    KIDS.length = 0;
+    (list || []).forEach(function (n) { KIDS.push(String(n)); });
+    return KIDS;
+  }
+
+  var DEFAULTS = {
+    epoch: '2026-09-14',        // a Monday: week 0 of the rotation starts here
+    weekOffset: 0,              // nudge which job everyone starts on
+    backupOffset: 0,            // nudge who is backup first
+    fallback: 'Mum/Dad',        // the final backups
+    coverMode: 'parents',       // 'parents': backup covers one busy child, Mum & Dad cover anything more
+                                // 'cascade': backup, then the next child in rotation, ... then Mum & Dad
+    calendarId: '563662e1011da34f250d47d7a02c3d36fc6aa98b73d8de3be81c7f69cf471c2f@group.calendar.google.com', // the family calendar
+    calendarWeeksAhead: 4,      // one Mon–Sun event per week
+    dailyEmail: true,           // email each child their jobs every morning (daily sync)
+    people: {}                  // { 'someone@gmail.com': '<child>' }  (lower-case emails)
+  };
+
+  function mod(n, m) { return ((n % m) + m) % m; }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+  function parse(iso) {
+    var p = String(iso).split('-');
+    return Date.UTC(+p[0], +p[1] - 1, +p[2]);
+  }
+  function toIso(ms) {
+    var d = new Date(ms);
+    return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate());
+  }
+  function isValidIso(iso) {
+    return /^\d{4}-\d{2}-\d{2}$/.test(String(iso)) && !isNaN(parse(iso));
+  }
+  function addDays(iso, n) { return toIso(parse(iso) + n * 86400000); }
+  function diffDays(a, b) { return Math.round((parse(a) - parse(b)) / 86400000); }
+
+  /** Monday of the week containing iso. */
+  function weekStart(iso) {
+    var dow = (new Date(parse(iso)).getUTCDay() + 6) % 7; // Mon=0 .. Sun=6
+    return addDays(iso, -dow);
+  }
+
+  /** Today's date in the browser's local zone (the server passes its own). */
+  function localToday(d) {
+    d = d || new Date();
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+
+  function withDefaults(cfg) {
+    var out = {};
+    Object.keys(DEFAULTS).forEach(function (k) {
+      out[k] = (cfg && cfg[k] !== undefined && cfg[k] !== null) ? cfg[k] : DEFAULTS[k];
+    });
+    if (!isValidIso(out.epoch)) out.epoch = DEFAULTS.epoch;
+    out.epoch = weekStart(out.epoch);
+    out.weekOffset = parseInt(out.weekOffset, 10) || 0;
+    out.backupOffset = parseInt(out.backupOffset, 10) || 0;
+    out.calendarWeeksAhead = Math.min(26, Math.max(1, parseInt(out.calendarWeeksAhead, 10) || DEFAULTS.calendarWeeksAhead));
+    if (out.coverMode !== 'cascade') out.coverMode = 'parents';
+    if (!String(out.fallback).trim() || out.fallback === 'Mum & Dad') out.fallback = DEFAULTS.fallback;
+    out.calendarId = String(out.calendarId || '').trim() || DEFAULTS.calendarId;
+    out.dailyEmail = out.dailyEmail !== false && out.dailyEmail !== 'false';
+    if (typeof out.people !== 'object' || out.people === null || Array.isArray(out.people)) out.people = {};
+    var people = {};
+    Object.keys(out.people).forEach(function (email) {
+      var e = String(email).trim().toLowerCase();
+      if (e && KIDS.indexOf(out.people[email]) >= 0) people[e] = out.people[email];
+    });
+    out.people = people;
+    return out;
+  }
+
+  function dayIndex(iso, cfg) { return diffDays(iso, cfg.epoch); }
+  function weekIndex(iso, cfg) { return Math.floor(dayIndex(iso, cfg) / 7) + (cfg.weekOffset || 0); }
+
+  /** Who owns job j (index) in week w: everyone moves one job along each week. */
+  function ownerOf(jobIndex, week) { return KIDS[mod(jobIndex - week, KIDS.length)]; }
+
+  /** Index of the job whose holder backs up job j (see JOBS[].backup). */
+  function backupJobIndex(jobIndex) {
+    var id = JOBS[mod(jobIndex, JOBS.length)].backup;
+    for (var i = 0; i < JOBS.length; i++) if (JOBS[i].id === id) return i;
+    return mod(jobIndex + 1, JOBS.length);
+  }
+
+  /** Who backs up job j (index) on a date: fixed for the whole week. */
+  function backupOf(jobIndex, iso, cfg) {
+    return ownerOf(backupJobIndex(jobIndex), weekIndex(iso, cfg));
+  }
+
+  /**
+   * Full plan for one day.
+   * busyNames: array of children who are busy that day.
+   *
+   * Rules:
+   *  - every child keeps their weekly job unless they are busy
+   *  - every job has its own backup child (see JOBS[].backup); the backup does the
+   *    job when its owner is busy
+   *  - a busy child never covers
+   *  - coverMode 'parents' (default): if the job's backup is busy too, Mum & Dad
+   *    (cfg.fallback) do it. They are the final backups.
+   *  - coverMode 'cascade': the next child along the shift order steps in before
+   *    Mum & Dad.
+   */
+  function planDay(iso, cfg, busyNames) {
+    cfg = withDefaults(cfg);
+    var busy = (busyNames || []).filter(function (n) { return KIDS.indexOf(n) >= 0; });
+    var isBusy = function (n) { return busy.indexOf(n) >= 0; };
+    var week = weekIndex(iso, cfg);
+    var cascade = cfg.coverMode === 'cascade';
+
+    var assignments = JOBS.map(function (job, j) {
+      var owner = ownerOf(j, week);
+      var bj = backupJobIndex(j);
+      var backup = ownerOf(bj, week);
+      var a = { job: job, owner: owner, backup: backup, doer: owner, coveredFor: null };
+      if (!isBusy(owner)) return a;
+      a.coveredFor = owner;
+      a.doer = cfg.fallback;
+      if (!isBusy(backup)) a.doer = backup;
+      else if (cascade) {
+        for (var k = 1; k < KIDS.length - 1; k++) {
+          var next = ownerOf(bj + k, week);
+          if (next !== owner && !isBusy(next)) { a.doer = next; break; }
+        }
+      }
+      return a;
+    });
+
+    return { date: iso, week: week, busy: busy, assignments: assignments };
+  }
+
+  /** "<child>/Mum/Dad": the job's backup child, then the final backups. */
+  function backupLabel(a, cfg) {
+    return a.backup + '/' + withDefaults(cfg).fallback;
+  }
+
+  /** Jobs a child is backup for on a date. */
+  function backupsFor(name, iso, cfg, busyNames) {
+    return planDay(iso, cfg, busyNames).assignments.filter(function (a) { return a.backup === name; });
+  }
+
+  /** busyMap: { 'YYYY-MM-DD': ['<child>', ...] } */
+  function planRange(fromIso, days, cfg, busyMap) {
+    cfg = withDefaults(cfg);
+    busyMap = busyMap || {};
+    var out = [];
+    for (var i = 0; i < days; i++) {
+      var iso = addDays(fromIso, i);
+      out.push(planDay(iso, cfg, busyMap[iso]));
+    }
+    return out;
+  }
+
+  /** The job a child holds in a given week. */
+  function jobFor(name, iso, cfg) {
+    cfg = withDefaults(cfg);
+    var week = weekIndex(iso, cfg);
+    return JOBS[mod(KIDS.indexOf(name) + week, JOBS.length)];
+  }
+
+  /** Email addresses recorded for a child (may be empty). */
+  function emailsFor(name, cfg) {
+    cfg = withDefaults(cfg);
+    return Object.keys(cfg.people).filter(function (e) { return cfg.people[e] === name; });
+  }
+
+  /**
+   * The morning email for one child: { subject, text, lines }.
+   * Their job today, whether they are backup, who they are covering, and the week ahead.
+   */
+  function emailFor(name, iso, cfg, busyMap) {
+    cfg = withDefaults(cfg);
+    busyMap = busyMap || {};
+    var day = planDay(iso, cfg, busyMap[iso]);
+    var busyToday = day.busy.indexOf(name) >= 0;
+    var mine = day.assignments.filter(function (a) { return a.doer === name; });
+    // a busy child is not available as backup, so no backup duty is mentioned that day
+    var backing = busyToday ? [] : day.assignments.filter(function (a) { return a.backup === name && a.doer !== name; });
+    var lines = ['Hi ' + name + ',', '', 'Today, ' + fmt(iso, 'long') + ':'];
+
+    // Names of who is being covered are deliberately left out of the email.
+    if (day.busy.indexOf(name) >= 0) {
+      lines.push('- You are marked busy today; your job is covered.');
+    }
+    // main job first, then anything they are covering
+    mine.filter(function (a) { return !a.coveredFor; }).forEach(function (a) {
+      lines.push('- ' + a.job.icon + ' ' + a.job.name + ' (your backup is ' + backupLabel(a, cfg) + ')');
+    });
+    mine.filter(function (a) { return a.coveredFor; }).forEach(function (a) {
+      lines.push('- ' + a.job.icon + ' ' + a.job.name + ' (You and ' + cfg.fallback + ' are covering)');
+    });
+    backing.forEach(function (a) {
+      lines.push('- 🛟 Backup for ' + a.job.name);
+    });
+
+    // the week ahead: who I back up, grouped into runs of days
+    var ws = weekStart(iso);
+    var runs = [];
+    for (var i = 0; i < 7; i++) {
+      var d = addDays(ws, i);
+      var b = (busyMap[d] || []).indexOf(name) >= 0
+        ? 'busy'
+        : backupsFor(name, d, cfg, busyMap[d]).map(function (a) { return a.job.name; }).join(' and ');
+      var last = runs[runs.length - 1];
+      if (last && last.what === b) last.to = d; else runs.push({ what: b, from: d, to: d });
+    }
+    lines.push('', 'This week your job is ' + jobFor(name, ws, cfg).name + '.');
+    if (runs.every(function (r) { return !r.what || r.what === 'busy'; })) {
+      lines.push('You are not backup this week.');
+    } else {
+      lines.push('You are backup for:');
+      runs.forEach(function (r) {
+        var span = r.from === r.to ? fmt(r.from, 'short') : fmt(r.from, 'short') + '–' + fmt(r.to, 'short');
+        lines.push('- ' + span + ': ' + (r.what || 'nobody'));
+      });
+    }
+    lines.push('', 'Next week: ' + jobFor(name, addDays(ws, 7), cfg).name + '.');
+
+    // Subject: own job, then the job they are backup for, always marked (Backup) so they
+    // know they may have to stand in even when nobody is busy yet.
+    var own = mine.filter(function (a) { return !a.coveredFor; }).map(function (a) { return a.job.name; }).join(' + ');
+    var backupJobs = busyToday ? '' : day.assignments.filter(function (a) { return a.backup === name; }).map(function (a) { return a.job.name; }).join(', ');
+    var subject = "Today's Job  -  " + fmt(iso) + ': ' + (own || (busyToday ? 'Busy' : 'nothing to do')) +
+      (backupJobs ? ' +  ' + backupJobs + ' (Backup)' : '');
+    return { subject: subject, text: lines.join('\n'), lines: lines };
+  }
+
+  function jobById(id) {
+    for (var i = 0; i < JOBS.length; i++) if (JOBS[i].id === id) return JOBS[i];
+    return null;
+  }
+
+  var DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function fmt(iso, style) {
+    var d = new Date(parse(iso));
+    var dow = DOW[(d.getUTCDay() + 6) % 7];
+    var day = d.getUTCDate(), mon = MONTHS[d.getUTCMonth()];
+    if (style === 'short') return dow + ' ' + day;
+    if (style === 'long') return dow + ' ' + day + ' ' + mon + ' ' + d.getUTCFullYear();
+    return dow + ' ' + day + ' ' + mon;
+  }
+
+  return {
+    KIDS: KIDS, setKids: setKids, JOBS: JOBS, DEFAULTS: DEFAULTS,
+    withDefaults: withDefaults, isValidIso: isValidIso,
+    addDays: addDays, diffDays: diffDays, weekStart: weekStart, localToday: localToday, fmt: fmt,
+    dayIndex: dayIndex, weekIndex: weekIndex, backupJobIndex: backupJobIndex, ownerOf: ownerOf, backupOf: backupOf,
+    planDay: planDay, planRange: planRange, backupsFor: backupsFor, backupLabel: backupLabel, jobFor: jobFor, jobById: jobById,
+    emailsFor: emailsFor, emailFor: emailFor
+  };
+})();
+if (typeof module !== 'undefined') module.exports = Rota;
+</script>
+
+<script>
+// Remote transport for the GitHub Pages copy of the app: replaces google.script.run
+// with fetch() calls to the Apps Script JSON API. The body is sent as text/plain so the
+// browser makes a simple request (no CORS preflight, which Apps Script cannot answer).
+(function () {
+  var API_URL = 'https://script.google.com/macros/s/AKfycbxdVkSL1gr6zY7vnKvlMWJnjxTPmKt6Yomdb0M7uHVOh-Whkge8Cw6CYubTBlblaOzo/exec';
+  var PIN_KEY = 'jobchart.pin';
+  function getPin() { try { return localStorage.getItem(PIN_KEY) || ''; } catch (e) { return ''; } }
+  function setPin(p) { try { p ? localStorage.setItem(PIN_KEY, p) : localStorage.removeItem(PIN_KEY); } catch (e) { /* ignore */ } }
+  var asking = null;
+  /** A small PIN screen; resolves once a PIN has been entered (checked by the next request). */
+  function askPin(msg) {
+    if (asking) return asking;
+    asking = new Promise(function (resolve) {
+      var o = document.createElement('div');
+      o.style.cssText = 'position:fixed;inset:0;z-index:9999;background:var(--bg,#f6f4ef);display:flex;align-items:center;justify-content:center;padding:16px';
+      o.innerHTML = '<form style="background:var(--card,#fff);border:1px solid var(--line,#e3ded4);border-radius:14px;padding:22px;max-width:320px;width:100%;text-align:center;display:flex;flex-direction:column;gap:12px;font-family:inherit">' +
+        '<div style="font-size:22px;font-weight:700">🧹 Family Jobs</div><div style="color:var(--muted,#6b665e)">' + (msg || 'Enter the family PIN.') + '</div>' +
+        '<input type="password" inputmode="numeric" autocomplete="off" aria-label="PIN" placeholder="PIN" style="font-size:22px;text-align:center;letter-spacing:.3em;padding:10px;border:1px solid var(--line,#e3ded4);border-radius:8px">' +
+        '<button type="submit" style="padding:10px;border:0;border-radius:8px;background:var(--accent,#2f6df6);color:var(--accent-ink,#fff);font-weight:700;font-size:15px">Open</button></form>';
+      document.body.appendChild(o);
+      var input = o.querySelector('input');
+      setTimeout(function () { input.focus(); }, 50);
+      o.querySelector('form').addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!input.value.trim()) return;
+        setPin(input.value.trim()); o.remove(); asking = null; resolve();
+      });
+    });
+    return asking;
+  }
+  function call(fn, args, tries) {
+    tries = tries || 0;
+    return fetch(API_URL, { method: 'POST', body: JSON.stringify({ fn: fn, args: args, pin: getPin() }), redirect: 'follow' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j.ok && j.code === 'pin' && tries < 5) {
+          var msg = getPin() ? 'That PIN is not right. Try again.' : 'Enter the family PIN.';
+          if (/too many/i.test(j.error || '')) msg = j.error;
+          setPin('');
+          return askPin(msg).then(function () { return call(fn, args, tries + 1); });
+        }
+        if (!j.ok) throw new Error(j.error || 'Request failed');
+        return j.result;
+      });
+  }
+  var FNS = ['getBootstrap', 'setBusy', 'setBusyDay', 'saveSettings', 'syncCalendar', 'clearCalendar',
+    'removeGuestsFromAppEvents', 'sendJobEmails', 'installDailyTrigger', 'removeDailyTrigger'];
+  function runner(ok, err) {
+    var r = {
+      withSuccessHandler: function (f) { return runner(f, err); },
+      withFailureHandler: function (f) { return runner(ok, f); }
+    };
+    FNS.forEach(function (name) {
+      r[name] = function () {
+        call(name, [].slice.call(arguments)).then(function (out) { ok && ok(out); }, function (e) { err ? err(e) : console.error(e); });
+      };
+    });
+    return r;
+  }
+  window.google = { script: { run: runner(null, null) } };
+})();
+</script>
+
+  <script>
+(function () {
+  'use strict';
+
+  var S = {
+    settings: Rota.withDefaults({}), busy: {}, today: Rota.localToday(), me: '',
+    view: 'today', day: null, week: null, boot: null, live: false, saving: false
+  };
+
+  function $(sel, root) { return (root || document).querySelector(sel); }
+  function $$(sel, root) { return [].slice.call((root || document).querySelectorAll(sel)); }
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function rpc(fn) {
+    var args = [].slice.call(arguments, 1);
+    return new Promise(function (resolve, reject) {
+      var r = google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(function (e) { reject(e instanceof Error ? e : new Error((e && e.message) || String(e))); });
+      r[fn].apply(r, args);
+    });
+  }
+
+  var toastTimer;
+  function toast(msg, isErr) {
+    var t = $('#toast');
+    t.textContent = msg;
+    t.className = 'toast' + (isErr ? ' err' : '');
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.hidden = true; }, isErr ? 7000 : 3500);
+  }
+  function fail(e) { console.error(e); toast((e && e.message) || String(e), true); }
+
+  function weekLabel(w) { return w < 0 ? 'before the rota starts (' + Rota.fmt(S.settings.epoch) + ')' : 'week ' + (w + 1) + ' of the rota'; }
+  function dot(name) { return '<span class="dot k' + Rota.KIDS.indexOf(name) + '"></span>'; }
+  function chip(name) { return '<span class="chip">' + dot(name) + esc(name) + '</span>'; }
+  function plan(iso) { return Rota.planDay(iso, S.settings, S.busy[iso]); }
+
+  // ------------------------------------------------------------- boot
+
+  function boot() {
+    rpc('getBootstrap').then(function (b) {
+      S.boot = b;
+      S.live = !!b.live;
+      Rota.setKids(b.kids);           // names come from the server, never the page source
+      S.settings = Rota.withDefaults(b.settings);
+      S.busy = b.busy || {};
+      S.today = b.today || S.today;
+      S.day = S.today;
+      S.week = Rota.weekStart(S.today);
+      var stored = '';
+      try { stored = localStorage.getItem('jobchart.me') || ''; } catch (e) { /* ignore */ }
+      S.me = (b.me && b.me.name) || stored || '';
+      if (b.remote) {
+        // GitHub Pages copy: view + busy marking only; admin settings live on the Google-hosted page
+        $('#tabs button[data-view="settings"]').hidden = true;
+        if (S.view === 'settings') S.view = 'today';
+      }
+      renderMe();
+      render();
+    }).catch(function (e) {
+      $('#main').innerHTML = '<div class="error">Could not load: ' + esc(e.message) + '</div>';
+    });
+  }
+
+  function renderMe() {
+    var sel = $('#meSelect');
+    sel.innerHTML = '<option value="">Mum / Dad</option>' + Rota.KIDS.map(function (k) {
+      return '<option value="' + k + '"' + (k === S.me ? ' selected' : '') + '>' + k + '</option>';
+    }).join('');
+    sel.onchange = function () {
+      S.me = sel.value;
+      try { localStorage.setItem('jobchart.me', S.me); } catch (e) { /* ignore */ }
+      render();
+    };
+  }
+
+  $('#tabs').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button[data-view]');
+    if (!b) return;
+    S.view = b.dataset.view;
+    render();
+  });
+
+  function render() {
+    $$('#tabs button').forEach(function (b) { b.classList.toggle('active', b.dataset.view === S.view); });
+    var main = $('#main');
+    if (S.view === 'today') main.innerHTML = renderToday();
+    else if (S.view === 'week') main.innerHTML = renderWeek();
+    else if (S.view === 'rota') main.innerHTML = renderRota();
+    else main.innerHTML = renderSettings();
+    bind(main);
+    updateEmailPreview();
+  }
+
+  function updateEmailPreview() {
+    var sel = $('#previewWho'), pre = $('#emailPreview');
+    if (!sel || !pre) return;
+    var draw = function () {
+      var m = Rota.emailFor(sel.value, S.today, S.settings, S.busy);
+      pre.textContent = 'Subject: ' + m.subject + '\n\n' + m.text;
+    };
+    sel.onchange = draw;
+    draw();
+  }
+
+  // ------------------------------------------------------------- today
+
+  function renderToday() {
+    var d = plan(S.day);
+    var isToday = S.day === S.today;
+    var h = '<div class="nav">' +
+      '<button class="btn" data-act="day" data-n="-1">‹</button>' +
+      '<h2>' + (isToday ? 'Today' : Rota.fmt(S.day, 'long').split(' ')[0]) + '<span class="sub">' + Rota.fmt(S.day, 'long') + ' · ' + weekLabel(d.week) + '</span></h2>' +
+      '<button class="btn" data-act="day" data-n="1">›</button></div>';
+    if (!isToday) h += '<div class="row" style="justify-content:center;margin-bottom:10px"><button class="btn small" data-act="today">Back to today</button></div>';
+
+    h += '<div class="banner ' + (d.busy.length ? 'busy' : 'backup') + '">' + (d.busy.length ? '📅' : '🛟') + ' <span class="grow">' +
+      (d.busy.length ? 'Busy: ' + d.busy.map(esc).join(', ') : 'Nobody busy · each job has its own backup') + '</span>' +
+      '<button class="btn small" data-act="sheet" data-date="' + S.day + '">Who\'s busy?</button></div>';
+
+    h += '<div class="cards">';
+    d.assignments.forEach(function (a) {
+      var mine = S.me && (a.doer === S.me || a.backup === S.me);
+      var who = a.coveredFor
+        ? '<s class="was">' + esc(a.coveredFor) + '</s> → ' + esc(a.doer)
+        : esc(a.doer);
+      var right = a.coveredFor
+        ? '<span class="tag busy">' + esc(a.coveredFor) + ' is busy</span>'
+        : '<span class="tag backup">🛟 Backup is ' + esc(Rota.backupLabel(a, S.settings)) + '</span>';
+      h += '<div class="card' + (mine ? ' mine' : '') + (a.coveredFor ? ' cover' : '') + '">' +
+        '<div class="grow"><div class="job"><span class="jicon">' + a.job.icon + '</span> ' + esc(a.job.name) + ' - <span class="who">' + who + '</span></div><div class="sub">' + right + '</div></div></div>';
+    });
+    h += '</div>';
+    if (S.me) {
+      var mine = d.assignments.filter(function (a) { return a.doer === S.me; });
+      var backing = d.assignments.filter(function (a) { return a.backup === S.me && a.doer !== S.me; });
+      var msg = mine.length ? 'Your job' + (mine.length > 1 ? 's' : '') + ': ' + mine.map(function (a) { return a.job.name; }).join(', ') : 'No job for you today';
+      if (backing.length) msg += ' · backup for ' + backing.map(function (a) { return a.owner + "'s " + a.job.name; }).join(', ');
+      if (d.busy.indexOf(S.me) >= 0) msg = 'You are marked busy today';
+      h += '<p class="note" style="text-align:center;margin-top:12px">' + esc(msg) + '</p>';
+    }
+    return h;
+  }
+
+  // ------------------------------------------------------------- week
+
+  function renderWeek() {
+    var days = Rota.planRange(S.week, 7, S.settings, S.busy);
+    var h = '<div class="nav">' +
+      '<button class="btn" data-act="week" data-n="-1">‹</button>' +
+      '<h2>Week of ' + Rota.fmt(S.week) + '<span class="sub">' + weekLabel(days[0].week) + ' · tap a day to mark who\'s busy</span></h2>' +
+      '<button class="btn" data-act="week" data-n="1">›</button></div>';
+    if (S.week !== Rota.weekStart(S.today)) h += '<div class="row" style="justify-content:center;margin-bottom:10px"><button class="btn small" data-act="thisweek">This week</button></div>';
+
+    h += '<div class="tablewrap"><table class="grid"><thead><tr><th>Job</th>';
+    days.forEach(function (d) {
+      h += '<th class="day' + (d.date === S.today ? ' today' : '') + '" data-act="sheet" data-date="' + d.date + '">' +
+        '<span class="d">' + Rota.fmt(d.date, 'short') + '</span>' +
+        '<span class="n">' + (d.busy.length ? d.busy.length + ' busy' : '&nbsp;') + '</span></th>';
+    });
+    h += '</tr></thead><tbody>';
+    Rota.JOBS.forEach(function (job, j) {
+      h += '<tr><td>' + job.icon + ' ' + esc(job.name) + '</td>';
+      days.forEach(function (d) {
+        var a = d.assignments[j];
+        var cls = 'cell' + (d.date === S.today ? ' today' : '') + (a.coveredFor ? ' cover' : '') + (Rota.KIDS.indexOf(a.doer) < 0 ? ' fallback' : '');
+        h += '<td class="' + cls + '" data-act="sheet" data-date="' + d.date + '"><span class="name">' + esc(a.doer) + '</span>' +
+          (a.coveredFor ? '<span class="for">for ' + esc(a.coveredFor) + '</span>' : '<span class="bk">Backup is ' + esc(Rota.backupLabel(a, S.settings)) + '</span>') + '</td>';
+      });
+      h += '</tr>';
+    });
+    h += '<tr class="backup"><td>📅 Busy</td>';
+    days.forEach(function (d) {
+      h += '<td class="cell" data-act="sheet" data-date="' + d.date + '"><span class="name">' + (d.busy.length ? d.busy.map(esc).join(', ') : '–') + '</span></td>';
+    });
+    h += '</tr></tbody></table></div>';
+    h += '<div class="legend"><span style="color:var(--backup)">🛟 that job\'s backup for the week (the Floors, Bathrooms and Washing holders)</span><span style="color:var(--cover)">■ covering for someone busy</span><span style="color:var(--warn)">■ final backups (Mum/Dad) cover</span></div>';
+    return h;
+  }
+
+  // ------------------------------------------------------------- rota overview
+
+  function renderRota() {
+    var start = Rota.weekStart(S.today);
+    var h = '<div class="nav"><h2>Weekly rota<span class="sub">who has which job, next 12 weeks</span></h2></div>';
+    h += '<div class="tablewrap"><table class="grid"><thead><tr><th>Week</th>';
+    Rota.JOBS.forEach(function (j) { h += '<th>' + j.icon + '<br><span class="n" style="font-size:11px;color:var(--muted)">' + esc(j.name) + '</span></th>'; });
+    h += '</tr></thead><tbody>';
+    for (var w = 0; w < 12; w++) {
+      var monday = Rota.addDays(start, w * 7);
+      var d = plan(monday);
+      h += '<tr' + (w === 0 ? ' class="thisweek"' : '') + '><td' + (w === 0 ? ' class="today"' : '') + '>' + Rota.fmt(monday) + '</td>';
+      d.assignments.forEach(function (a) { h += '<td' + (w === 0 ? ' class="today"' : '') + '><span class="name">' + esc(a.owner) + '</span></td>'; });
+      h += '</tr>';
+    }
+    h += '</tbody></table></div>';
+    h += '<p class="note" style="margin-top:10px">Everyone moves one job along each Monday in this order: Washing Up → Floors → Table & Sides → Bathrooms → Dishwasher → Washing → back to Washing Up, so each child does all six jobs over six weeks and no two hard weeks touch. The Floors, Bathrooms and Washing holders are the backups for the week: Bathrooms covers Washing Up and Washing, Washing covers Floors and Table & Sides, Floors covers Bathrooms and Dishwasher. Nobody backs up the job they did the week before.</p>';
+    return h;
+  }
+
+  // ------------------------------------------------------------- settings
+
+  function renderSettings() {
+    var s = S.settings, b = S.boot || {};
+    var h = '';
+    if (!S.live) h += '<div class="note warn" style="margin-bottom:12px">Preview mode: changes are kept in this browser only. Calendar sync and emails work once the app is deployed to Google Apps Script.</div>';
+
+    h += '<div class="section"><h3>Rota</h3>' +
+      '<div class="field"><label>Rota starts (a Monday)</label><input type="date" id="f_epoch" value="' + s.epoch + '"></div>' +
+      '<div class="field"><label>Shift the job rotation</label><input type="number" id="f_weekOffset" value="' + s.weekOffset + '" step="1"></div>' +
+      '<div class="field"><label>Final backups</label><input type="text" id="f_fallback" value="' + esc(s.fallback) + '"></div>' +
+      '<div class="field"><label>If a job\'s backup is busy too</label><select id="f_coverMode"><option value="parents"' + (s.coverMode === 'parents' ? ' selected' : '') + '>Final backups (Mum/Dad) do it</option><option value="cascade"' + (s.coverMode === 'cascade' ? ' selected' : '') + '>The next child in the rotation does it</option></select></div>' +
+      '<p class="help">The Floors, Bathrooms and Washing holders are the backups: Bathrooms covers Washing Up and Washing, Washing covers Floors and Table & Sides, Floors covers Bathrooms and Dishwasher. Nobody backs up the job they did last week. The chain for each job is: job holder → that job\'s backup → final backups.</p>' +
+      '<p class="help">Use the "shift" number if you want a different child to start on a given job without changing the start date.</p>' +
+      '</div>';
+
+    h += '<div class="section"><h3>Google Calendar</h3>' +
+      '<div class="field"><label>Calendar ID</label><input type="text" id="f_calendarId" placeholder="family calendar" value="' + esc(s.calendarId) + '"></div>' +
+      '<div class="field"><label>Weeks ahead</label><input type="number" id="f_calendarWeeks" min="1" max="26" value="' + s.calendarWeeksAhead + '"></div>' +
+      '<p class="help">One event per week, Monday to Sunday, with the week\'s jobs in the title and the backups and any busy days in the description.</p>' +
+      '<p class="help">Find the ID under the calendar\'s Settings → "Integrate calendar" in Google Calendar. The family calendar must be shared with whoever runs the sync with "Make changes to events".</p>' +
+      '<div class="row"><button class="btn primary" data-act="syncCal"' + (S.live ? '' : ' disabled') + '>Sync calendar now</button>' +
+      '<button class="btn danger" data-act="clearCal"' + (S.live ? '' : ' disabled') + '>Remove app events</button>' +
+      '<button class="btn" data-act="unGuest"' + (S.live ? '' : ' disabled') + '>Remove children as guests (no emails)</button></div>' +
+      '</div>';
+
+    h += '<div class="section"><h3>Automatic daily sync</h3>' +
+      '<p class="help">Runs at about 6:30am every day as the family account: refreshes the calendar and sends the morning emails.</p>' +
+      '<div class="row"><span class="note">' + (b.dailyTrigger ? '<span class="ok">✓ daily sync is on</span>' : 'daily sync is off') + '</span>' +
+      '<button class="btn" data-act="trigger" data-on="' + (b.dailyTrigger ? '0' : '1') + '"' + (S.live ? '' : ' disabled') + '>' + (b.dailyTrigger ? 'Turn off' : 'Turn on') + '</button></div>' +
+      '</div>';
+
+    var emailsFor = {};
+    Object.keys(s.people).forEach(function (e) { (emailsFor[s.people[e]] = emailsFor[s.people[e]] || []).push(e); });
+    h += '<div class="section"><h3>People</h3>' +
+      '<p class="help">Each child\'s own email address, used only for their morning email. They never need to open the app. Leave blank for anyone without an address; separate two addresses with a comma. To see the jobs in their own Google Calendar, share the family calendar with them from Google Calendar.</p>' +
+      Rota.KIDS.map(function (k) {
+        return '<div class="field"><label>' + dot(k) + ' ' + k + '</label><input type="email" multiple class="f_email" data-name="' + k + '" placeholder="' + k.toLowerCase() + '@gmail.com" value="' + esc((emailsFor[k] || []).join(', ')) + '"></div>';
+      }).join('') +
+      '<div class="field"><label>Family account</label><div class="note">' + (b.runsAs ? esc(b.runsAs) : 'shown once deployed') + '<br>runs the daily sync and sends the emails</div></div>' +
+      '<h3 style="margin-top:14px">Morning email</h3>' +
+      '<div class="checks"><label><input type="checkbox" id="f_dailyEmail"' + (s.dailyEmail ? ' checked' : '') + '> Email each child every morning: their job and what they are backup for</label></div>' +
+      '<p class="help">Goes out with the daily sync at about 6:30am. This is the only email the app ever sends to the children.</p>' +
+      '<div class="row" style="margin-bottom:10px"><label class="note">Preview the email for <select id="previewWho">' + Rota.KIDS.map(function (k) { return '<option value="' + k + '"' + (k === (S.me || Rota.KIDS[0]) ? ' selected' : '') + '>' + k + '</option>'; }).join('') + '</select></label>' +
+      '<button class="btn primary" data-act="sendEmails"' + (S.live ? '' : ' disabled') + '>Send today\'s emails now</button></div>' +
+      '<pre id="emailPreview" class="note" style="white-space:pre-wrap;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;margin:0"></pre>' +
+      '</div>';
+
+    h += '<div class="row" style="justify-content:flex-end"><button class="btn primary" data-act="saveSettings">Save settings</button></div>';
+    return h;
+  }
+
+  function readSettingsForm() {
+    var people = {};
+    $$('.f_email').forEach(function (inp) {
+      inp.value.split(/[,\s;]+/).forEach(function (e) {
+        e = e.trim().toLowerCase();
+        if (e && e.indexOf('@') > 0) people[e] = inp.dataset.name;
+      });
+    });
+    return Rota.withDefaults({
+      dailyEmail: $('#f_dailyEmail').checked,
+      epoch: $('#f_epoch').value,
+      weekOffset: $('#f_weekOffset').value,
+      people: people
+    });
+  }
+
+  function saveSettings(then) {
+    var s = readSettingsForm();
+    return rpc('saveSettings', s).then(function (saved) {
+      S.settings = Rota.withDefaults(saved);
+      if (then) then(); else { toast('Settings saved'); render(); }
+    }).catch(fail);
+  }
+
+  // ------------------------------------------------------------- busy sheet
+
+  function openSheet(iso) {
+    var sel = (S.busy[iso] || []).slice();
+    var back = $('#sheetBackdrop'), sheet = $('#sheet');
+    function draw() {
+      var d = Rota.planDay(iso, S.settings, sel);
+      var covers = d.assignments.filter(function (a) { return a.coveredFor; });
+      sheet.innerHTML = '<h3>Who\'s busy on ' + Rota.fmt(iso, 'long') + '?</h3>' +
+        '<div class="note">Tap a name to mark them busy. Their job passes to the backup.</div>' +
+        '<div class="who-list">' + Rota.KIDS.map(function (k) {
+          var bk = d.assignments.filter(function (a) { return a.backup === k; }).map(function (a) { return a.owner; }).join(', ');
+          return '<button data-name="' + k + '" class="' + (sel.indexOf(k) >= 0 ? 'busy' : '') + '">' + dot(k) + ' ' + k +
+            '<span class="note" style="display:block;font-weight:400;font-size:12px">' + esc(Rota.jobFor(k, iso, S.settings).name) + ' · backup for ' + esc(bk) + '</span></button>';
+        }).join('') + '</div>' +
+        '<div class="preview">' +
+        (covers.length ? covers.map(function (a) { return '<b>' + esc(a.doer) + '</b> does ' + esc(a.job.name) + ' for ' + esc(a.coveredFor); }).join('<br>') : 'No cover needed') + '</div>' +
+        '<div class="actions"><button class="btn" data-x="cancel">Cancel</button><button class="btn primary" data-x="save">Save</button></div>';
+    }
+    draw();
+    back.hidden = false;
+    sheet.onclick = function (ev) {
+      var nb = ev.target.closest('button[data-name]');
+      if (nb) {
+        var n = nb.dataset.name, i = sel.indexOf(n);
+        if (i >= 0) sel.splice(i, 1); else sel.push(n);
+        draw();
+        return;
+      }
+      var xb = ev.target.closest('button[data-x]');
+      if (!xb) return;
+      if (xb.dataset.x === 'cancel') { back.hidden = true; return; }
+      xb.disabled = true;
+      rpc('setBusyDay', iso, sel).then(function (map) {
+        S.busy = map || {};
+        back.hidden = true;
+        toast(sel.length ? sel.join(', ') + ' marked busy on ' + Rota.fmt(iso) : 'Nobody busy on ' + Rota.fmt(iso));
+        render();
+      }).catch(function (e) { xb.disabled = false; fail(e); });
+    };
+    back.onclick = function (ev) { if (ev.target === back) back.hidden = true; };
+  }
+
+  // ------------------------------------------------------------- actions
+
+  function bind(root) {
+    root.onclick = function (ev) {
+      var el = ev.target.closest('[data-act]');
+      if (!el) return;
+      var act = el.dataset.act;
+      if (act === 'day') { S.day = Rota.addDays(S.day, +el.dataset.n); render(); }
+      else if (act === 'today') { S.day = S.today; render(); }
+      else if (act === 'week') { S.week = Rota.addDays(S.week, 7 * +el.dataset.n); render(); }
+      else if (act === 'thisweek') { S.week = Rota.weekStart(S.today); render(); }
+      else if (act === 'sheet') openSheet(el.dataset.date);
+      else if (act === 'saveSettings') saveSettings();
+      else if (act === 'syncCal') busyButton(el, function () {
+        return saveSettings(function () {
+          return rpc('syncCalendar').then(function (r) {
+            toast('Calendar "' + r.calendar + '" updated for ' + r.weeks + ' weeks\n' + r.created + ' added · ' + r.updated + ' changed · ' + r.deleted + ' removed');
+            render();
+          });
+        });
+      });
+      else if (act === 'unGuest') {
+        if (!confirm('Remove every child from the guest list of the app\'s calendar events? No emails are sent.')) return;
+        busyButton(el, function () { return rpc('removeGuestsFromAppEvents').then(function (r) { toast(r.guestsRemoved + ' guest entries removed from ' + r.events + ' events, silently'); }); });
+      }
+      else if (act === 'clearCal') {
+        if (!confirm('Remove every event this app created from the calendar?')) return;
+        busyButton(el, function () { return rpc('clearCalendar').then(function (r) { toast(r.deleted + ' events removed'); }); });
+      }
+      else if (act === 'sendEmails') busyButton(el, function () {
+        return saveSettings(function () {
+          return rpc('sendJobEmails', S.today).then(function (r) {
+            toast(r.sent.length ? 'Emailed ' + r.sent.join(', ') + (r.skipped.length ? '\nNo address for ' + r.skipped.join(', ') : '') : 'Nobody has an email address yet', !r.sent.length);
+            render();
+          });
+        });
+      });
+      else if (act === 'trigger') busyButton(el, function () {
+        return saveSettings(function () {
+          return rpc(el.dataset.on === '1' ? 'installDailyTrigger' : 'removeDailyTrigger').then(function (r) {
+            S.boot.dailyTrigger = !!r.installed;
+            toast(r.installed ? 'Daily sync turned on' : 'Daily sync turned off');
+            render();
+          });
+        });
+      });
+    };
+  }
+
+  function busyButton(el, work) {
+    var label = el.textContent;
+    el.disabled = true; el.textContent = 'Working…';
+    Promise.resolve().then(work).catch(fail).then(function () {
+      if (document.body.contains(el)) { el.disabled = false; el.textContent = label; }
+    });
+  }
+
+  boot();
+})();
+</script>
+
+</body>
+</html>
