@@ -111,10 +111,6 @@ main{max-width:980px;margin:0 auto;padding-top:16px;display:flex;flex-direction:
 .evs{position:absolute;left:0;top:0;bottom:0;display:flex;flex-direction:row;gap:2px}
 .evs i{width:5px;background:var(--line-2)}
 .evs .spiritual{background:var(--a-spiritual)}.evs .social{background:var(--a-social)}.evs .physical{background:var(--a-physical)}.evs .intellectual{background:var(--a-intellectual)}
-.ev.a-spiritual .evb{background:color-mix(in srgb,var(--a-spiritual) 9%,var(--surface))}
-.ev.a-social .evb{background:color-mix(in srgb,var(--a-social) 9%,var(--surface))}
-.ev.a-physical .evb{background:color-mix(in srgb,var(--a-physical) 9%,var(--surface))}
-.ev.a-intellectual .evb{background:color-mix(in srgb,var(--a-intellectual) 11%,var(--surface))}
 .evt{font-weight:600;font-size:13px;line-height:1.25;color:var(--ink)}
 .evm{font-size:11.5px;color:var(--muted)}
 .evb.st-cancelled .evt{text-decoration:line-through;color:var(--muted)}
@@ -133,10 +129,6 @@ main{max-width:980px;margin:0 auto;padding-top:16px;display:flex;flex-direction:
 .stripe{position:absolute;left:0;top:0;bottom:0;display:flex;flex-direction:row;gap:2px;background:var(--surface)}
 .stripe span{width:6px;background:var(--line-2)}
 .stripe .spiritual{background:var(--a-spiritual)}.stripe .social{background:var(--a-social)}.stripe .physical{background:var(--a-physical)}.stripe .intellectual{background:var(--a-intellectual)}
-.card.a-spiritual .when{background:color-mix(in srgb,var(--a-spiritual) 16%,var(--surface))}
-.card.a-social .when{background:color-mix(in srgb,var(--a-social) 16%,var(--surface))}
-.card.a-physical .when{background:color-mix(in srgb,var(--a-physical) 16%,var(--surface))}
-.card.a-intellectual .when{background:color-mix(in srgb,var(--a-intellectual) 18%,var(--surface))}
 .when .d{font:700 24px/1 var(--display)}
 .when .w{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-top:3px}
 .ctitle{font-weight:700;font-size:16px;margin:0 0 3px}
@@ -227,10 +219,6 @@ main{max-width:980px;margin:0 auto;padding-top:16px;display:flex;flex-direction:
 .ihead{font:700 17px var(--display);margin:6px 0 8px}
 .ideagrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px}
 .ideab{position:relative;overflow:hidden;display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:0 7px 7px 0;background:var(--surface);padding:6px 8px 6px calc(6px + var(--n,1) * 7px)}
-.ideab.a-spiritual{background:color-mix(in srgb,var(--a-spiritual) 9%,var(--surface))}
-.ideab.a-social{background:color-mix(in srgb,var(--a-social) 9%,var(--surface))}
-.ideab.a-physical{background:color-mix(in srgb,var(--a-physical) 9%,var(--surface))}
-.ideab.a-intellectual{background:color-mix(in srgb,var(--a-intellectual) 11%,var(--surface))}
 .life{font-weight:700}
 .pills{display:inline-flex;flex-wrap:wrap;gap:3px;vertical-align:middle}
 .pill{display:inline-block;padding:0 7px;border-radius:999px;font-size:11px;font-weight:400;line-height:1.5;color:var(--ink-2);background:transparent;border:1.5px solid var(--line-2);white-space:nowrap}
@@ -380,10 +368,13 @@ body.ro .emp button,body.ro #ideaForm,body.ro [data-act="starter"],body.ro [data
 const API_URL="https://script.google.com/macros/s/AKfycbwbA2bR6g7JAVCO1kFqw9joZgVkxZi6LrkogyLthFs0PvPUfoiVp_dow63pAYCfN3nYDQ/exec";
 const AREAS=[["spiritual","Spiritual"],["social","Social"],["physical","Physical"],["intellectual","Intellectual"]];
 const STATUSES=[["idea","Idea"],["planned","Planned"],["confirmed","Confirmed"],["done","Done"],["cancelled","Cancelled"]];
-const DEFAULT_GROUPS=["All quorums","Deacons quorum","Teachers quorum","Priests quorum","All Young Women","Young Women 11–12","Young Women 13–14","Young Women 15–18","Combined youth"];
-const YW_CLASSES=["Young Women 11–12","Young Women 13–14","Young Women 15–18"];
+const DEFAULT_GROUPS=["All quorums","Deacons quorum","Teachers quorum","Priests quorum","All Young Women","Builders of Faith","Messengers of Hope","Gatherers of Light","Combined youth"];
+// Young Women age groups (First Presidency, April 2026): turning 12–13, 14–15, 16 and older
+const YW_CLASSES=["Builders of Faith","Messengers of Hope","Gatherers of Light"];
+const OLD_YW={"Young Women 11–12":"Builders of Faith","Young Women 13–14":"Messengers of Hope","Young Women 15–18":"Gatherers of Light"};
+const YW_RE=/young women|class|builders? of faith|messengers? of hope|gatherers? of light/i;
 /** Quorums ("q") or Young Women ("yw") side of a group; null for combined youth. */
-const sideOf=g=>/quorum/i.test(g||"")?"q":/young women|class/i.test(g||"")?"yw":null;
+const sideOf=g=>/quorum/i.test(g||"")?"q":YW_RE.test(g||"")?"yw":null;
 const DEFAULT_CHECKS=["Two adults confirmed","Bishopric informed","Permission forms","Transport","Food","Equipment","Budget approved"];
 // Starter ideas for the ideas bank (added only when someone asks for them).
 const STARTER_IDEAS=[
@@ -464,7 +455,12 @@ function addYoungWomenClasses(){
     state.meta={...state.meta,groups:[...g.slice(0,i),"All Young Women",...YW_CLASSES,...g.slice(i+1)]};
     put("meta","ward",{...state.meta});
   }
-  for(const[id,a]of state.activities)if(a.group==="Young Women")put("activities",id,{...a,group:"All Young Women",updated:Date.now()});
+  const g2=state.meta.groups;
+  if(g2&&g2.some(x=>OLD_YW[x])){state.meta={...state.meta,groups:g2.map(x=>OLD_YW[x]||x)};put("meta","ward",{...state.meta});}
+  for(const[id,a]of state.activities){
+    const to=a.group==="Young Women"?"All Young Women":OLD_YW[a.group];
+    if(to)put("activities",id,{...a,group:to,updated:Date.now()});
+  }
 }
 function moveIdeasToActivities(){
   if(!state.ideas.size)return;
@@ -538,9 +534,9 @@ const isUmbrella=g=>/^(all\b|combined\b|young women$)/i.test(String(g||"").trim(
 function umbrellaCovers(g,col){
   const n=String(g||"").toLowerCase();
   if(/^combined/.test(n))return true;
-  if(n==="young women")return /class|young women/i.test(col);
+  if(n==="young women")return YW_RE.test(col);
   if(/^all\b.*quorum/.test(n))return /quorum/i.test(col);
-  if(/^all\b.*(class|young women)/.test(n))return /class|young women/i.test(col);
+  if(/^all\b.*(class|young women)/.test(n))return YW_RE.test(col);
   return /^all\b/.test(n);
 }
 function gridColumns(){
