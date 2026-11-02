@@ -121,6 +121,25 @@ td.emp.over{outline:2px dashed var(--accent)!important;outline-offset:-4px;backg
 .cal .dcol{width:64px;text-align:left;font-weight:500;color:var(--ink-2);white-space:nowrap;padding:8px 6px}
 .cal .dcol b{font:700 17px var(--display);color:var(--ink)}
 .cal .dcol span{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em}
+.cal .dcol .night{display:block;font-size:11px;line-height:1.25;color:var(--muted);white-space:normal;max-width:104px;margin-top:3px;text-transform:none;letter-spacing:0}
+.cal .dcol .night b{font:700 11px var(--sans);color:var(--ink-2)}
+.cal .dcol button.nightbtn{all:unset;cursor:pointer;display:block}
+.cal .dcol button.nightbtn:focus-visible{outline:2px solid var(--accent)}
+.npop{position:fixed;z-index:250;display:flex;flex-direction:column;gap:8px;padding:12px;width:260px;box-shadow:0 8px 28px rgba(0,0,0,.35)}
+.npop label{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--muted)}
+.npop input{font:inherit;font-size:14px;padding:6px 8px;border:1px solid var(--line-2);border-radius:6px;background:var(--surface);color:var(--ink)}
+.npop .row{display:flex;gap:6px;justify-content:flex-end}
+.people{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.pgroup{padding:12px}
+.pgroup h3{font:700 15px var(--display);margin:0 0 8px}
+.prow{display:flex;gap:8px;align-items:baseline;padding:3px 0;font-size:14px}
+.pcode{font:700 12px var(--sans);min-width:44px;padding:1px 6px;border:1.5px solid var(--line-2);border-radius:999px;text-align:center;color:var(--ink-2)}
+.prole{color:var(--muted);font-size:12.5px;margin-left:auto;text-align:right}
+.ptable{width:100%;border-collapse:collapse;font-size:14px}
+.ptable th{text-align:left;font-size:12px;color:var(--muted);font-weight:600;padding:4px}
+.ptable td{padding:3px 4px}
+.ptable input,.ptable select{width:100%;box-sizing:border-box;font:inherit;padding:5px 7px;border:1px solid var(--line-2);border-radius:6px;background:var(--surface);color:var(--ink)}
+.whois{font-size:12.5px;color:var(--muted);margin-top:3px}
 .cal tr.mrow td{font:700 15px var(--display);color:var(--ink);background:var(--bg);padding:12px 8px 6px;border-bottom:1px solid var(--line-2)}
 .cal tr.today .dcol{color:var(--accent)}
 .evb{display:flex;flex-direction:column;gap:1px;width:100%;text-align:left;border:1px solid var(--line);border-radius:7px;background:var(--surface);padding:5px 8px 5px calc(6px + var(--n,1) * 7px);position:relative;overflow:hidden;margin-bottom:3px}
@@ -285,6 +304,7 @@ body.ro .emp button,body.ro #ideaForm,body.ro [data-act="starter"],body.ro [data
     <button type="button" data-view="calendar" aria-pressed="true">Calendar</button>
     <button type="button" data-view="balance" aria-pressed="false">Stats</button>
     <button type="button" data-view="ideas" aria-pressed="false">Ideas</button>
+    <button type="button" data-view="people" aria-pressed="false">People</button>
   </div>
   <div class="arealegend" id="areaBar" role="group" aria-label="Show only these areas"></div>
   <div class="topright">
@@ -426,7 +446,7 @@ const FSY_IDEAS=[
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const state={sideAreas:new Set(),hide:(()=>{try{return new Set(JSON.parse(localStorage.getItem("youth-activities-hide")||"[]"));}catch(e){return new Set();}})(),activities:new Map(),ideas:new Map(),meta:{},ready:false,view:"calendar",group:"",when:"all",areas:new Set(),period:"term",bank:"all",editing:null,layout:(()=>{try{return localStorage.getItem("youth-activities-layout")||"grid";}catch(e){return "grid";}})()};
+const state={people:[],nights:{},peopleEdit:false,sideAreas:new Set(),hide:(()=>{try{return new Set(JSON.parse(localStorage.getItem("youth-activities-hide")||"[]"));}catch(e){return new Set();}})(),activities:new Map(),ideas:new Map(),meta:{},ready:false,view:"calendar",group:"",when:"all",areas:new Set(),period:"term",bank:"all",editing:null,layout:(()=>{try{return localStorage.getItem("youth-activities-layout")||"grid";}catch(e){return "grid";}})()};
 let ward=null,pin=null,owner=null,rev=0,pending=[],flushing=false,flushTimer=0,loading=false;
 const PIN_KEY="youth-activities-pin",WARD_KEY="youth-activities-ward";
 
@@ -503,6 +523,8 @@ async function loadAll(){
     state.activities=new Map(Object.entries(all.activities||{}));
     state.ideas=new Map(Object.entries(all.ideas||{}));
     state.meta=(all.meta&&all.meta.ward)||{};
+    state.people=(all.meta&&all.meta.people&&all.meta.people.list)||[];
+    state.nights=(all.meta&&all.meta.nights&&all.meta.nights.map)||{};
     rev=all.rev||0;state.ready=true;
     render();
     if(!state.readOnly){moveIdeasToActivities();addYoungWomenClasses();}
@@ -542,7 +564,7 @@ function render(){
   $("#newBtn").hidden=!!state.readOnly;$("#pinBtn").hidden=!state.readOnly||!state.ready;
   const m=$("#main");
   if(!state.ready){m.innerHTML=`<div class="panel empty"><p>Loading…</p></div>`;return;}
-  m.innerHTML=state.view==="balance"?renderBalance():state.view==="ideas"?renderIdeas():renderCalendar();
+  m.innerHTML=state.view==="balance"?renderBalance():state.view==="ideas"?renderIdeas():state.view==="people"?renderPeople():renderCalendar();
 }
 function areaChips(sel,act){
   return AREAS.map(([a,l])=>`<button class="chip" type="button" data-act="${act}" data-area="${a}" aria-pressed="${sel.has(a)}"><span class="dot ${a}"></span>${l}</button>`).join("");
@@ -594,7 +616,7 @@ function evCell(list,colspan){
   const a0=list[0][1],ar=(a0.areas||[])[0];
   return `<td${colspan>1?` colspan="${colspan}"`:""} class="ev${ar?" a-"+ar:""}">${list.map(([id,a])=>{
     const ars=orderedAreas(a);
-    return `<button class="evb st-${esc(a.status||"planned")}" style="--n:${Math.max(1,ars.length)}" type="button" data-act="edit" data-id="${esc(id)}"><span class="evs" aria-hidden="true">${ars.length?ars.map(x=>`<i class="${x}"></i>`).join(""):"<i></i>"}</span><span class="evt">${esc(a.title||"Untitled")}</span><span class="evm">${esc(statusName(a.status||"planned"))}${colspan>1||!cols_.includes(a.group)?" · "+esc(groupLabel(a.group)):""}${areaPills(a)}</span></button>`;}).join("")}</td>`;
+    return `<button class="evb st-${esc(a.status||"planned")}" style="--n:${Math.max(1,ars.length)}" type="button" data-act="edit" data-id="${esc(id)}"><span class="evs" aria-hidden="true">${ars.length?ars.map(x=>`<i class="${x}"></i>`).join(""):"<i></i>"}</span><span class="evt">${esc(a.title||"Untitled")}</span><span class="evm">${esc(statusName(a.status||"planned"))}${colspan>1||!cols_.includes(a.group)?" · "+esc(groupLabel(a.group)):""}${a.planning?" · "+esc(a.planning):""}${areaPills(a)}</span></button>`;}).join("")}</td>`;
 }
 let cols_=[];
 function renderGrid(list,today){
@@ -613,7 +635,7 @@ function renderGrid(list,today){
     if(mk!==month){month=mk;h+=`<tr class="mrow"><td colspan="${cols.length+1}">${esc(mk)}</td></tr>`;}
     const evs=byDate.get(iso);
     const cells=cols.map(col=>{const own=evs.filter(([,a])=>a.group===col);const use=own.length?own:evs.filter(([,a])=>coversColumn(a,col,cols));return {col,list:use,key:use.map(e=>e[0]).join("|")};});
-    h+=`<tr${iso===today?' class="today"':""}><th class="dcol" scope="row"><b>${d.getDate()}</b> <span>${esc(d.toLocaleDateString(undefined,{weekday:"short"}))}</span></th>`;
+    h+=`<tr${iso===today?' class="today"':""}><th class="dcol" scope="row">${nightCell(iso,`<b>${d.getDate()}</b> <span>${esc(d.toLocaleDateString(undefined,{weekday:"short"}))}</span>`)}</th>`;
     for(let i=0;i<cells.length;){
       let j=i+1;while(j<cells.length&&cells[i].key&&cells[j].key===cells[i].key)j++;
       h+=cells[i].list.length?evCell(cells[i].list,j-i):`<td class="emp${iso>=today?" ok":""}"><button type="button" data-act="new-at" data-date="${iso}" data-group="${esc(cells[i].col)}" aria-label="Add an activity for ${esc(cells[i].col)} on ${esc(d.toLocaleDateString())}">+</button></td>`;
@@ -690,6 +712,71 @@ function closePick(){const p=$("#pick");if(p)p.remove();}
 document.addEventListener("mousedown",e=>{if($("#pick")&&!e.target.closest("#pick"))closePick();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closePick();});
 window.addEventListener("scroll",closePick,true);
+/* ---------- weekly plan: who is responsible and how the night is split ---------- */
+function nightCell(iso,inner){
+  const n=state.nights[iso],info=n&&(n.r||n.f)?`<span class="night">${n.r?`<b>${esc(n.r)}</b>`:""}${n.r&&n.f?" · ":""}${esc(n.f||"")}</span>`:"";
+  return state.readOnly?inner+info:`<button type="button" class="nightbtn" data-act="night" data-date="${iso}" aria-label="Plan for this night">${inner}${info}</button>`;
+}
+function openNight(iso,el){
+  closePick();
+  const n=state.nights[iso]||{},vals=k=>[...new Set(Object.values(state.nights).map(x=>x[k]).filter(Boolean))].sort();
+  const p=document.createElement("div");p.className="npop panel";p.id="pick";
+  p.innerHTML=`<p class="lbl" style="margin:0">${esc(dateObj(iso).toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long"}))}</p>
+    <label>Responsible for planning<input id="nR" list="nRL" maxlength="40" value="${esc(n.r||"")}" placeholder="e.g. CM1"></label>
+    <label>How the night is split<input id="nF" list="nFL" maxlength="60" value="${esc(n.f||"")}" placeholder="e.g. YW joint / YM by quorum"></label>
+    <datalist id="nRL">${vals("r").map(v=>`<option value="${esc(v)}">`).join("")}</datalist><datalist id="nFL">${vals("f").map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
+    <div class="row"><button class="btn" type="button" data-n="cancel">Cancel</button><button class="btn primary" type="button" data-n="save">Save</button></div>`;
+  document.body.appendChild(p);
+  const r=el.getBoundingClientRect();
+  p.style.left=Math.max(8,Math.min(innerWidth-p.offsetWidth-8,r.left))+"px";
+  p.style.top=Math.max(8,Math.min(innerHeight-p.offsetHeight-8,r.bottom+4))+"px";
+  const save=()=>{const r_=$("#nR").value.trim(),f_=$("#nF").value.trim(),m={...state.nights};
+    if(r_||f_)m[iso]={r:r_,f:f_};else delete m[iso];
+    state.nights=m;closePick();put("meta","nights",{map:m});};
+  p.addEventListener("click",e=>{const b=e.target.closest("[data-n]");if(!b)return;if(b.dataset.n==="save")save();else closePick();});
+  p.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();save();}});
+  setTimeout(()=>$("#nR").focus(),0);
+}
+
+/* ---------- people: initials and role codes used on the calendar ---------- */
+const KINDS=[["leader","Leaders"],["yw","Young Women"],["ym","Young Men"]];
+function whoIs(text){
+  const codes=String(text||"").toUpperCase().match(/[A-Z][A-Z0-9]{1,4}/g)||[];
+  const out=[...new Set(codes)].map(c=>{const m=state.people.filter(p=>String(p.code).toUpperCase()===c||String(p.initials||"").toUpperCase()===c);
+    return m.length?`<b>${esc(c)}</b> ${m.map(p=>esc(p.name)+(p.ward?" ("+esc(p.ward)+")":"")).join(" or ")}`:"";}).filter(Boolean);
+  return out.length?`<span class="whois">${out.join(" · ")}</span>`:"";
+}
+function renderPeople(){
+  const P=state.people;
+  if(state.peopleEdit&&!state.readOnly){
+    return `<div class="panel" style="padding:12px"><div class="filters" style="margin-bottom:8px"><h2 class="ihead" style="margin:0">People</h2>
+      <div class="formbtns" style="margin-left:auto"><button class="btn" type="button" data-act="person-add">+ Add person</button><button class="btn primary" type="button" data-act="people-done">Done</button></div></div>
+      <p class="hint" style="margin:0 0 8px;color:var(--muted)">First names only. The code is what goes in brackets on the calendar, e.g. SH or YWP.</p>
+      <table class="ptable"><thead><tr><th>Code</th><th>Initials</th><th>First name</th><th>Ward</th><th>Group</th><th>Role</th><th></th></tr></thead><tbody>
+      ${P.map((p,i)=>`<tr><td><input data-pf="code" data-pi="${i}" value="${esc(p.code||"")}" maxlength="6" aria-label="Code"></td>
+        <td><input data-pf="initials" data-pi="${i}" value="${esc(p.initials||"")}" maxlength="4" aria-label="Initials"></td>
+        <td><input data-pf="name" data-pi="${i}" value="${esc(p.name||"")}" maxlength="30" aria-label="First name"></td>
+        <td><input data-pf="ward" data-pi="${i}" value="${esc(p.ward||"")}" maxlength="12" aria-label="Ward"></td>
+        <td><select data-pf="kind" data-pi="${i}" aria-label="Group">${KINDS.map(([k,l])=>`<option value="${k}"${p.kind===k?" selected":""}>${l}</option>`).join("")}</select></td>
+        <td><input data-pf="role" data-pi="${i}" value="${esc(p.role||"")}" maxlength="40" aria-label="Role"></td>
+        <td><button class="mini" type="button" data-act="person-del" data-i="${i}" aria-label="Remove">Remove</button></td></tr>`).join("")}
+      </tbody></table></div>`;
+  }
+  const wards=[...new Set(P.map(p=>p.ward||""))].sort((a,b)=>(a===""?1:0)-(b===""?1:0)||a.localeCompare(b));
+  const groups=[];
+  for(const w of wards)for(const[k,l]of KINDS){const list=P.filter(p=>(p.ward||"")===w&&p.kind===k);if(list.length)groups.push([(w?w+" ":"")+l,list,k]);}
+  const order=["YWP","YW1C","YW2C","B1","B2","B1C","B2C","AP","AT","AD"];
+  const sortP=(a,b)=>{const i=order.indexOf(a.code),j=order.indexOf(b.code);return (i<0?99:i)-(j<0?99:j)||String(a.name).localeCompare(b.name);};
+  return `<div class="filters"><h2 class="ihead" style="margin:0">People</h2>${state.readOnly?"":`<button class="btn" type="button" data-act="people-edit" style="margin-left:auto">Edit people</button>`}</div>
+    ${P.length?`<div class="people">${groups.map(([t,list,k])=>`<section class="panel pgroup"><h3>${esc(t)}</h3>${list.slice().sort(k==="leader"?sortP:(a,b)=>String(a.name).localeCompare(b.name)).map(p=>`<div class="prow"><span class="pcode">${esc(p.code||"")}${p.initials?" · "+esc(p.initials):""}</span><span>${esc(p.name||"")}</span><span class="prole">${esc(p.role||"")}</span></div>`).join("")}</section>`).join("")}</div>`
+      :`<div class="panel empty"><p>No people yet. Add the initials and role codes you use when planning, so everyone knows who SH or YWP is.</p></div>`}`;
+}
+let peopleTimer=0;
+function savePeople(){clearTimeout(peopleTimer);peopleTimer=setTimeout(()=>put("meta","people",{list:state.people}),600);}
+document.addEventListener("input",e=>{const t=e.target;if(!t.dataset||t.dataset.pi===undefined)return;
+  const p=state.people[+t.dataset.pi];if(!p)return;p[t.dataset.pf]=/^(code|initials)$/.test(t.dataset.pf)?t.value.trim().toUpperCase():t.value;
+  clearTimeout(peopleTimer);peopleTimer=setTimeout(()=>{pending.push({col:"meta",id:"people",body:{list:state.people}});clearTimeout(flushTimer);flushTimer=setTimeout(flush,250);},600);});
+
 function renderCalendar(){
   const today=todayIso();
   let list=sortedActivities().filter(([,a])=>{
@@ -861,7 +948,7 @@ function drawEditor(){
     ${linksField(e)}
     <div class="field"><label for="fLoc">Where</label><input id="fLoc" maxlength="120" value="${esc(a.location||"")}"></div>
     <div class="field"><label for="fBudget">Budget (£)</label><input id="fBudget" inputmode="decimal" maxlength="12" value="${esc(a.budget||"")}"></div>
-    <div class="field"><label for="fPlan">Youth planning it</label><input id="fPlan" maxlength="120" value="${esc(a.planning||"")}" placeholder="e.g. Sam B, Lily P"><span class="hint">First names and initials only.</span></div>
+    <div class="field"><label for="fPlan">Planning it</label><input id="fPlan" maxlength="120" value="${esc(a.planning||"")}" placeholder="e.g. SH / AP or Sam B"><span class="hint">Initials or codes from People, or first names.</span>${whoIs(a.planning)}</div>
     <div class="field"><label for="fAdults">Adults responsible</label><input id="fAdults" maxlength="120" value="${esc(a.adults||"")}" placeholder="e.g. Jane W, Hayden D"><span class="hint">At least two adults. First names and initials only.</span></div>
     <div class="field wide"><span class="lbl">Checklist</span><div class="checks">${e.checks.map((c,i)=>`<label><input type="checkbox" data-check="${i}"${c.d?" checked":""}>${esc(c.t)}<button class="x" type="button" data-act="del-check" data-i="${i}" aria-label="Remove ${esc(c.t)}">×</button></label>`).join("")}</div>
       <div class="addcheck"><input id="newCheck" maxlength="60" placeholder="Add a checklist item" aria-label="New checklist item"><button class="btn" type="button" data-act="add-check">Add</button></div></div>
@@ -897,6 +984,11 @@ document.addEventListener("click",e=>{
   const b=e.target.closest("[data-act]");if(!b)return;
   const act=b.dataset.act;
   switch(act){
+    case"night":openNight(b.dataset.date,b);return;
+    case"people-edit":state.peopleEdit=true;render();return;
+    case"people-done":state.peopleEdit=false;state.people=state.people.filter(p=>p.code||p.name);put("meta","people",{list:state.people});return;
+    case"person-add":state.people=[...state.people,{code:"",name:"",ward:"",kind:"yw",role:""}];render();{const ins=document.querySelectorAll('[data-pf="code"]');if(ins.length)ins[ins.length-1].focus();}return;
+    case"person-del":state.people=state.people.filter((_,i)=>i!==+b.dataset.i);put("meta","people",{list:state.people});return;
     case"view":state.view=b.dataset.view;render();return;
     case"enter-pin":$("#setModal").hidden=true;showGate("");return;
     case"undo-one":case"undo-from":{
