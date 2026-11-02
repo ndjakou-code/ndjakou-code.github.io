@@ -103,6 +103,7 @@ main:has(.calwrap){max-width:1320px}
 .ideaside h2{font:700 15px var(--display);margin:4px 0 0}
 .ideaside .hint{font-size:12.5px;color:var(--muted);margin:0 0 4px}
 .ideaside .inote,.ideaside .iact:empty{display:none}
+.sareas{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:6px}.sareas .abtn{padding:4px 8px 4px 13px;font-size:12px}
 .sdrag{cursor:grab}.sdrag:active{cursor:grabbing}
 .sdrag.lift{opacity:.45}
 body.dragging td.emp.ok{outline:2px dashed var(--line-2);outline-offset:-4px}
@@ -408,12 +409,19 @@ const FSY_IDEAS=[
   {issue:"November 2026",title:"Three truths and a lie",areas:["social","intellectual","spiritual"],notes:"Share facts about yourselves, match scripture halves, then find truths in conference talks to practise spotting error.",url:FSY_BASE+"2026/11/fsy-lessons/05a-activity-idea?lang=eng"},
   {issue:"November 2026",title:"Freed by truth",areas:["spiritual","social","physical"],notes:"A blindfolded, tied-up volunteer is freed step by step as the group completes faith challenges.",url:FSY_BASE+"2026/11/fsy-lessons/05b-activity-idea?lang=eng"},
   {issue:"October 2026",title:"Healthy cook-off",areas:["physical","spiritual","social"],notes:"Teams cook a healthy meal or snack on a budget, talk about nutrition and waste, then share or donate the food.",url:FSY_BASE+"2026/10/fsy-lessons/05a-activity-idea?lang=eng"},
-  {issue:"October 2026",title:"Use your five senses",areas:["physical","spiritual","intellectual"],notes:"A blindfold guessing game using touch, smell, taste and sound, leading into gratitude for our bodies.",url:FSY_BASE+"2026/10/fsy-lessons/05b-activity-idea?lang=eng"}
+  {issue:"October 2026",title:"Use your five senses",areas:["physical","spiritual","intellectual"],notes:"A blindfold guessing game using touch, smell, taste and sound, leading into gratitude for our bodies.",url:FSY_BASE+"2026/10/fsy-lessons/05b-activity-idea?lang=eng"},
+  {issue:"September 2026",title:"One-match fire challenge",areas:["physical","spiritual"],notes:"Outdoors, teams build a fire from a single match hot enough to burn a string 18 inches up, then link it to accessing God's power.",url:FSY_BASE+"2026/09/fsy-lessons/05a-activity-idea?lang=eng"},
+  {issue:"September 2026",title:"Flashlight treasure hunt",areas:["spiritual","physical","intellectual"],notes:"Groups use a map, compass or GPS to find four stations with flashlight parts, assemble and light them, then talk about priesthood power.",url:FSY_BASE+"2026/09/fsy-lessons/05b-activity-idea?lang=eng"},
+  {issue:"April 2025",title:"Easter celebration ideas",areas:["spiritual","social"],notes:"Pick from a list of Easter ideas: fly paper kites, bake bread, make an Easter egg tree or paper palm leaves, or do a service project.",url:FSY_BASE+"2025/04/03-20-ideas-easter-celebration?lang=eng"},
+  {issue:"January 2025",title:"Youth theme bracelets",areas:["social","spiritual"],notes:"Knot three-colour thread bracelets with a sun charm as a reminder to look to Christ.",url:FSY_BASE+"2025/01/2025-youth-theme-bracelet-instructions?lang=eng"},
+  {issue:"January 2025",title:"The impossible paper",areas:["spiritual","intellectual"],notes:"Cut one sheet of paper so a person can step through it, then talk about trusting God when things seem impossible.",url:FSY_BASE+"2025/01/20-the-impossible-paper?lang=eng"},
+  {issue:"October 2024",title:"Bottle rockets",areas:["social","intellectual","physical"],notes:"Build and launch air-powered bottle rockets, and invite a friend who doesn't usually come to help teach everyone.",url:FSY_BASE+"2024/10/09-belonging-blastoff?lang=eng"},
+  {issue:"January 2024",title:"Gospel picture collage frames",areas:["social","spiritual"],notes:"Make collage frames from pictures cut out of Church magazines; the article also has youth tips for planning activities together.",url:FSY_BASE+"2024/01/questions-and-answers/17-youth-activity-ideas?lang=eng"}
 ];
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const state={hide:(()=>{try{return new Set(JSON.parse(localStorage.getItem("youth-activities-hide")||"[]"));}catch(e){return new Set();}})(),activities:new Map(),ideas:new Map(),meta:{},ready:false,view:"calendar",group:"",when:"all",areas:new Set(),period:"term",bank:"all",editing:null,layout:(()=>{try{return localStorage.getItem("youth-activities-layout")||"grid";}catch(e){return "grid";}})()};
+const state={sideAreas:new Set(),hide:(()=>{try{return new Set(JSON.parse(localStorage.getItem("youth-activities-hide")||"[]"));}catch(e){return new Set();}})(),activities:new Map(),ideas:new Map(),meta:{},ready:false,view:"calendar",group:"",when:"all",areas:new Set(),period:"term",bank:"all",editing:null,layout:(()=>{try{return localStorage.getItem("youth-activities-layout")||"grid";}catch(e){return "grid";}})()};
 let ward=null,pin=null,owner=null,rev=0,pending=[],flushing=false,flushTimer=0,loading=false;
 const PIN_KEY="youth-activities-pin",WARD_KEY="youth-activities-ward";
 
@@ -602,13 +610,15 @@ function renderGrid(list,today){
 /** Desktop: unplanned ideas beside the grid, to drag onto a future night. */
 function withIdeas(main){
   if(state.readOnly)return main;
-  const mine=[...state.activities.entries()].filter(([,a])=>!a.date&&(!state.areas.size||(a.areas||[]).some(x=>state.areas.has(x))))
+  const want=state.sideAreas.size?state.sideAreas:state.areas,hit=ar=>!want.size||(ar||[]).some(x=>want.has(x));
+  const mine=[...state.activities.entries()].filter(([,a])=>!a.date&&hit(a.areas))
     .sort((x,y)=>String(x[1].title).localeCompare(y[1].title));
   const have=new Set([...state.activities.values()].flatMap(a=>linksOf(a)));
-  const fsy=FSY_IDEAS.map((i,n)=>[i,n]).filter(([i])=>!have.has(i.url)&&(!state.areas.size||i.areas.some(x=>state.areas.has(x))));
+  const fsy=FSY_IDEAS.map((i,n)=>[i,n]).filter(([i])=>!have.has(i.url)&&hit(i.areas));
   const item=(drag,i,meta,editId)=>`<div class="sdrag" draggable="true" data-drag="${esc(drag)}">${ideaBlock(i,meta,"",editId)}</div>`;
   return `<div class="calwrap"><div class="calmain">${main}</div><aside class="ideaside panel" aria-label="Ideas">
     <h2>Ideas</h2><p class="hint">Drag an idea onto a future night.</p>
+    <div class="sareas">${AREAS.map(([a,l])=>`<button class="abtn a-${a}" type="button" data-act="side-area" data-area="${a}" aria-pressed="${state.sideAreas.has(a)}">${l}</button>`).join("")}</div>
     ${mine.length?mine.map(([id,a])=>item("a:"+id,a,areaPills(a)||"No area yet",id)).join(""):`<p class="hint">No unplanned ideas.</p>`}
     ${fsy.length?`<h2>For the Strength of Youth</h2>${fsy.map(([i,n])=>item("f:"+n,i,(areaPills(i)||"")+" "+esc(i.issue))).join("")}`:""}
   </aside></div>`;
@@ -858,6 +868,7 @@ document.addEventListener("click",e=>{
       openEditor(null,{title:x.title,group:x.group,areas:[...(x.areas||[])],notes:x.notes||"",links:linksOf(x),location:x.location||"",budget:x.budget||"",status:"planned"});
       setTimeout(()=>{const d=$("#fDate");if(d)d.focus();},60);return;}
     case"close-edit":closeEditor();return;
+    case"side-area":{const a=b.dataset.area;state.sideAreas.has(a)?state.sideAreas.delete(a):state.sideAreas.add(a);const sc=$(".ideaside")?$(".ideaside").scrollTop:0;render();if($(".ideaside"))$(".ideaside").scrollTop=sc;return;}
     case"filter-area":{const a=b.dataset.area;state.areas.has(a)?state.areas.delete(a):state.areas.add(a);render();return;}
     case"edit-area":{readEditor();const s=state.editing.areas,a=b.dataset.area;s.has(a)?s.delete(a):s.add(a);drawEditor();return;}
     case"idea-area":{const s=state.newIdeaAreas||(state.newIdeaAreas=new Set()),a=b.dataset.area;const t=$("#ideaTitle").value;s.has(a)?s.delete(a):s.add(a);render();$("#ideaTitle").value=t;return;}
