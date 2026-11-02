@@ -425,7 +425,7 @@ const YW_CLASSES=["Builders of Faith","Messengers of Hope","Gatherers of Light"]
 const OLD_YW={"Young Women 11–12":"Builders of Faith","Young Women 13–14":"Messengers of Hope","Young Women 15–18":"Gatherers of Light"};
 const YW_RE=/young women|class|builders? of faith|messengers? of hope|gatherers? of light/i;
 /** Quorums ("q") or Young Women ("yw") side of a group; null for combined youth. */
-const sideOf=g=>/quorum/i.test(g||"")?"q":YW_RE.test(g||"")?"yw":null;
+const sideOf=g=>/quorum|young men/i.test(g||"")?"q":YW_RE.test(g||"")?"yw":null;
 const DEFAULT_CHECKS=["Two adults confirmed","Bishopric informed","Permission forms","Transport","Food","Equipment","Budget approved"];
 // Starter ideas for the ideas bank (added only when someone asks for them).
 const STARTER_IDEAS=[
@@ -459,7 +459,7 @@ const FSY_IDEAS=[
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const state={people:[],nights:{},peopleEdit:false,sideAreas:new Set(),hide:(()=>{try{return new Set(JSON.parse(localStorage.getItem("youth-activities-hide")||"[]"));}catch(e){return new Set();}})(),activities:new Map(),ideas:new Map(),meta:{},ready:false,view:"calendar",group:"",when:"all",areas:new Set(),period:"term",bank:"all",editing:null,layout:(()=>{try{return localStorage.getItem("youth-activities-layout")||"grid";}catch(e){return "grid";}})()};
+const state={breakQ:(()=>{try{return localStorage.getItem("youth-activities-breakq")||"quorum";}catch(e){return "quorum";}})(),breakYW:(()=>{try{return localStorage.getItem("youth-activities-breakyw")||"ward";}catch(e){return "ward";}})(),people:[],nights:{},peopleEdit:false,sideAreas:new Set(),hide:(()=>{try{return new Set(JSON.parse(localStorage.getItem("youth-activities-hide")||"[]"));}catch(e){return new Set();}})(),activities:new Map(),ideas:new Map(),meta:{},ready:false,view:"calendar",group:"",when:"all",areas:new Set(),period:"term",bank:"all",editing:null,layout:(()=>{try{return localStorage.getItem("youth-activities-layout")||"grid";}catch(e){return "grid";}})()};
 let ward=null,pin=null,owner=null,rev=0,pending=[],flushing=false,flushTimer=0,loading=false;
 const PIN_KEY="youth-activities-pin",WARD_KEY="youth-activities-ward";
 
@@ -472,7 +472,9 @@ const addMonths=(iso,m)=>{const d=new Date(iso+"T12:00:00");d.setMonth(d.getMont
 const dateObj=iso=>new Date(iso+"T12:00:00");
 const setupOf=()=>state.meta.setup==="dual"?"dual":"single";
 const wardNames=()=>(state.meta.wards&&state.meta.wards.length===2)?state.meta.wards:["Ward 1","Ward 2"];
-const dualGroups=([w1,w2])=>["Combined youth","All Young Women","Young Women "+w1,"Young Women "+w2,"All quorums","Priests quorum","Teachers quorum","Deacons quorum"];
+const dualGroups=([w1,w2])=>["Combined youth","All Young Women","Young Women "+w1,"Young Women "+w2,...YW_CLASSES,"All quorums","Young Men "+w1,"Young Men "+w2,"Priests quorum","Teachers quorum","Deacons quorum"];
+/** Dual ward: "Young Women CM1" / "Young Men CM2" style groups (one ward's youth together). */
+const isWardGroup=g=>{const m=String(g||"").match(/^young (?:wo)?men (.+)$/i);return !!m&&wardNames().includes(m[1]);};
 const groups=()=>(state.meta.groups&&state.meta.groups.length)?state.meta.groups:DEFAULT_GROUPS;
 const orderedAreas=x=>AREAS.map(([k])=>k).filter(k=>(x.areas||[]).includes(k));
 const areaName=a=>(AREAS.find(x=>x[0]===a)||[,a])[1];
@@ -609,12 +611,14 @@ function umbrellaCovers(g,col){
   const n=String(g||"").toLowerCase();
   if(/^combined/.test(n))return true;
   if(n==="young women")return YW_RE.test(col);
-  if(/^all\b.*quorum/.test(n))return /quorum/i.test(col);
-  if(/^all\b.*(class|young women)/.test(n))return YW_RE.test(col);
+  if(/^all\b.*(quorum|young men)/.test(n))return sideOf(col)==="q";
+  if(/^all\b.*(class|young women)/.test(n))return sideOf(col)==="yw";
   return /^all\b/.test(n);
 }
 function gridColumns(){
   let cols=groups().filter(g=>!isUmbrella(g)&&!state.hide.has(sideOf(g)));
+  if(setupOf()==="dual")cols=cols.filter(g=>{const sd=sideOf(g);if(!sd)return true;
+    const byWard=(sd==="q"?state.breakQ:state.breakYW)==="ward";return byWard===isWardGroup(g);});
   if(!cols.length)cols=["Activity"];
   if(state.group){cols=isUmbrella(state.group)?cols.filter(c=>umbrellaCovers(state.group,c)):cols.filter(c=>c===state.group);}
   return cols.length?cols:[state.group];
@@ -624,7 +628,9 @@ function coversColumn(a,col,cols){
   if(a.group===col)return true;
   if(cols.includes(a.group))return false;
   if(partsOf(a.group).length>1)return partsOf(a.group).includes(col);
-  return isUmbrella(a.group)?umbrellaCovers(a.group,col):!groups().includes(a.group)||!cols.length;
+  if(isUmbrella(a.group))return umbrellaCovers(a.group,col);
+  if(!groups().includes(a.group)||!cols.length)return true;
+  return !!sideOf(a.group)&&sideOf(a.group)===sideOf(col)&&!cols.some(c=>c===a.group);   // the other breakout: span its side
 }
 const nightDay=()=>{const c=[0,0,0,0,0,0,0];for(const a of state.activities.values())c[dateObj(a.date).getDay()]++;const m=Math.max(...c);return m?c.indexOf(m):2;};
 function evCell(list,colspan){
@@ -819,6 +825,8 @@ function renderCalendar(){
   let h=`<div class="filters">
     <select id="fGroup" aria-label="Group">${groupOptions(state.group,"All groups")}</select>
     <select id="fWhen" aria-label="When"><option value="upcoming"${state.when==="upcoming"?" selected":""}>Upcoming (${nUp})</option><option value="past"${state.when==="past"?" selected":""}>Past (${nPast})</option><option value="all"${state.when==="all"?" selected":""}>All dates (${nUp+nPast})</option></select>
+    ${setupOf()==="dual"?`<div class="lay sides" role="group" aria-label="Young Women columns">${[["ward","YW by ward"],["age","YW by age group"]].map(([k,n])=>`<button type="button" data-act="break" data-side="yw" data-k="${k}" aria-pressed="${state.breakYW===k}">${n}</button>`).join("")}</div>
+    <div class="lay sides" role="group" aria-label="Young Men columns">${[["quorum","YM by quorum"],["ward","YM by ward"]].map(([k,n])=>`<button type="button" data-act="break" data-side="q" data-k="${k}" aria-pressed="${state.breakQ===k}">${n}</button>`).join("")}</div>`:""}
     <div class="lay sides" role="group" aria-label="Show or hide">${[["q","Quorums"],["yw","Young Women"]].map(([k,n])=>`<button type="button" data-act="side" data-side="${k}" aria-pressed="${!state.hide.has(k)}">${n}</button>`).join("")}</div>
     <div class="lay" role="group" aria-label="Layout"><button type="button" data-act="layout" data-layout="grid" aria-pressed="${state.layout==="grid"}">Grid</button><button type="button" data-act="layout" data-layout="list" aria-pressed="${state.layout!=="grid"}">List</button></div>
   </div>`;
@@ -1020,6 +1028,8 @@ document.addEventListener("click",e=>{
       if(!b.classList.contains("armed")){b.classList.add("armed");const t=b.textContent;b.textContent="Confirm";setTimeout(()=>{if(b.isConnected){b.classList.remove("armed");b.textContent=t;}},3500);return;}
       undo(+b.dataset.n,act==="undo-from"?"from":"one");return;}
     case"show-past":state.when="past";render();return;
+    case"break":{const k=b.dataset.k;if(b.dataset.side==="q"){state.breakQ=k;try{localStorage.setItem("youth-activities-breakq",k);}catch(err){}}
+      else{state.breakYW=k;try{localStorage.setItem("youth-activities-breakyw",k);}catch(err){}}render();return;}
     case"side":{const k=b.dataset.side,o=k==="q"?"yw":"q";
       if(state.hide.has(k))state.hide.delete(k);else{state.hide.add(k);state.hide.delete(o);}   // never hide both
       try{localStorage.setItem("youth-activities-hide",JSON.stringify([...state.hide]));}catch(err){}render();return;}
