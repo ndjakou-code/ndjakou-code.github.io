@@ -139,6 +139,9 @@ td.emp.over{outline:2px dashed var(--accent)!important;outline-offset:-4px;backg
 .ptable th{text-align:left;font-size:12px;color:var(--muted);font-weight:600;padding:4px}
 .ptable td{padding:3px 4px}
 .ptable input,.ptable select{width:100%;box-sizing:border-box;font:inherit;padding:5px 7px;border:1px solid var(--line-2);border-radius:6px;background:var(--surface);color:var(--ink)}
+#setupSel{font:inherit;padding:6px 8px;border:1px solid var(--line-2);border-radius:6px;background:var(--surface);color:var(--ink)}
+.dualnames{display:flex;gap:10px;margin-top:8px}.dualnames label{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--muted);flex:1}
+.dualnames input{font:inherit;padding:6px 8px;border:1px solid var(--line-2);border-radius:6px;background:var(--surface);color:var(--ink)}
 .whois{font-size:12.5px;color:var(--muted);margin-top:3px}
 .cal tr.mrow td{font:700 15px var(--display);color:var(--ink);background:var(--bg);padding:12px 8px 6px;border-bottom:1px solid var(--line-2)}
 .cal tr.today .dcol{color:var(--accent)}
@@ -339,6 +342,16 @@ body.ro .emp button,body.ro #ideaForm,body.ro [data-act="starter"],body.ro [data
         <p class="muted">You're viewing. Enter the ward PIN to add or change activities.</p>
         <button class="btn primary" type="button" data-act="enter-pin">Enter PIN to edit</button>
       </div>
+      <div id="setupSec">
+        <h3 class="eyebrow">Setup</h3>
+        <p class="muted">Dual ward is for two wards whose youth meet together: Young Women get a column per ward, and each night and person can belong to a ward.</p>
+        <select id="setupSel" aria-label="Setup"><option value="single">Single ward</option><option value="dual">Dual ward (two wards combined)</option></select>
+        <div id="dualNames" class="dualnames" hidden>
+          <label>Ward 1 short name<input id="ward1" maxlength="12" placeholder="e.g. CM1"></label>
+          <label>Ward 2 short name<input id="ward2" maxlength="12" placeholder="e.g. CM2"></label>
+        </div>
+        <div class="formbtns" style="margin-top:8px"><button class="btn" type="button" data-act="save-setup">Save setup</button></div>
+      </div>
       <div id="groupsSec">
         <h3 class="eyebrow">Groups</h3>
         <p class="muted">One per line, as you want them to appear (classes, quorums, combined).</p>
@@ -457,6 +470,9 @@ const pad=n=>String(n).padStart(2,"0");
 const todayIso=()=>{const d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());};
 const addMonths=(iso,m)=>{const d=new Date(iso+"T12:00:00");d.setMonth(d.getMonth()+m);return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());};
 const dateObj=iso=>new Date(iso+"T12:00:00");
+const setupOf=()=>state.meta.setup==="dual"?"dual":"single";
+const wardNames=()=>(state.meta.wards&&state.meta.wards.length===2)?state.meta.wards:["Ward 1","Ward 2"];
+const dualGroups=([w1,w2])=>["Combined youth","All Young Women","Young Women "+w1,"Young Women "+w2,"All quorums","Priests quorum","Teachers quorum","Deacons quorum"];
 const groups=()=>(state.meta.groups&&state.meta.groups.length)?state.meta.groups:DEFAULT_GROUPS;
 const orderedAreas=x=>AREAS.map(([k])=>k).filter(k=>(x.areas||[]).includes(k));
 const areaName=a=>(AREAS.find(x=>x[0]===a)||[,a])[1];
@@ -722,7 +738,7 @@ function openNight(iso,el){
   const n=state.nights[iso]||{},vals=k=>[...new Set(Object.values(state.nights).map(x=>x[k]).filter(Boolean))].sort();
   const p=document.createElement("div");p.className="npop panel";p.id="pick";
   p.innerHTML=`<p class="lbl" style="margin:0">${esc(dateObj(iso).toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long"}))}</p>
-    <label>Responsible for planning<input id="nR" list="nRL" maxlength="40" value="${esc(n.r||"")}" placeholder="e.g. CM1"></label>
+    <label${setupOf()==="dual"?"":" hidden"}>Responsible for planning<input id="nR" list="nRL" maxlength="40" value="${esc(n.r||"")}" placeholder="e.g. CM1"></label>
     <label>How the night is split<input id="nF" list="nFL" maxlength="60" value="${esc(n.f||"")}" placeholder="e.g. YW joint / YM by quorum"></label>
     <datalist id="nRL">${vals("r").map(v=>`<option value="${esc(v)}">`).join("")}</datalist><datalist id="nFL">${vals("f").map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
     <div class="row"><button class="btn" type="button" data-n="cancel">Cancel</button><button class="btn primary" type="button" data-n="save">Save</button></div>`;
@@ -743,28 +759,28 @@ const KINDS=[["leader","Leaders"],["yw","Young Women"],["ym","Young Men"]];
 function whoIs(text){
   const codes=String(text||"").toUpperCase().match(/[A-Z][A-Z0-9]{1,4}/g)||[];
   const out=[...new Set(codes)].map(c=>{const m=state.people.filter(p=>String(p.code).toUpperCase()===c||String(p.initials||"").toUpperCase()===c);
-    return m.length?`<b>${esc(c)}</b> ${m.map(p=>esc(p.name)+(p.ward?" ("+esc(p.ward)+")":"")).join(" or ")}`:"";}).filter(Boolean);
+    return m.length?`<b>${esc(c)}</b> ${m.map(p=>esc(p.name)+(p.ward&&setupOf()==="dual"?" ("+esc(p.ward)+")":"")).join(" or ")}`:"";}).filter(Boolean);
   return out.length?`<span class="whois">${out.join(" · ")}</span>`:"";
 }
 function renderPeople(){
-  const P=state.people;
+  const P=state.people,dual=setupOf()==="dual";
   if(state.peopleEdit&&!state.readOnly){
     return `<div class="panel" style="padding:12px"><div class="filters" style="margin-bottom:8px"><h2 class="ihead" style="margin:0">People</h2>
       <div class="formbtns" style="margin-left:auto"><button class="btn" type="button" data-act="person-add">+ Add person</button><button class="btn primary" type="button" data-act="people-done">Done</button></div></div>
       <p class="hint" style="margin:0 0 8px;color:var(--muted)">First names only. The code is what goes in brackets on the calendar, e.g. SH or YWP.</p>
-      <table class="ptable"><thead><tr><th>Code</th><th>Initials</th><th>First name</th><th>Ward</th><th>Group</th><th>Role</th><th></th></tr></thead><tbody>
+      <table class="ptable"><thead><tr><th>Code</th><th>Initials</th><th>First name</th>${dual?"<th>Ward</th>":""}<th>Group</th><th>Role</th><th></th></tr></thead><tbody>
       ${P.map((p,i)=>`<tr><td><input data-pf="code" data-pi="${i}" value="${esc(p.code||"")}" maxlength="6" aria-label="Code"></td>
         <td><input data-pf="initials" data-pi="${i}" value="${esc(p.initials||"")}" maxlength="4" aria-label="Initials"></td>
         <td><input data-pf="name" data-pi="${i}" value="${esc(p.name||"")}" maxlength="30" aria-label="First name"></td>
-        <td><input data-pf="ward" data-pi="${i}" value="${esc(p.ward||"")}" maxlength="12" aria-label="Ward"></td>
+        ${dual?`<td><select data-pf="ward" data-pi="${i}" aria-label="Ward"><option value=""></option>${[...new Set([...wardNames(),p.ward||""])].filter(Boolean).map(w=>`<option${w===p.ward?" selected":""}>${esc(w)}</option>`).join("")}</select></td>`:""}
         <td><select data-pf="kind" data-pi="${i}" aria-label="Group">${KINDS.map(([k,l])=>`<option value="${k}"${p.kind===k?" selected":""}>${l}</option>`).join("")}</select></td>
         <td><input data-pf="role" data-pi="${i}" value="${esc(p.role||"")}" maxlength="40" aria-label="Role"></td>
         <td><button class="mini" type="button" data-act="person-del" data-i="${i}" aria-label="Remove">Remove</button></td></tr>`).join("")}
       </tbody></table></div>`;
   }
-  const wards=[...new Set(P.map(p=>p.ward||""))].sort((a,b)=>(a===""?1:0)-(b===""?1:0)||a.localeCompare(b));
+  const wards=!dual?[""]:[...new Set(P.map(p=>p.ward||""))].sort((a,b)=>(a===""?1:0)-(b===""?1:0)||a.localeCompare(b));
   const groups=[];
-  for(const w of wards)for(const[k,l]of KINDS){const list=P.filter(p=>(p.ward||"")===w&&p.kind===k);if(list.length)groups.push([(w?w+" ":"")+l,list,k]);}
+  for(const w of wards)for(const[k,l]of KINDS){const list=P.filter(p=>(!dual||(p.ward||"")===w)&&p.kind===k);if(list.length)groups.push([(w?w+" ":"")+l,list,k]);}
   const order=["YWP","YW1C","YW2C","B1","B2","B1C","B2C","AP","AT","AD"];
   const sortP=(a,b)=>{const i=order.indexOf(a.code),j=order.indexOf(b.code);return (i<0?99:i)-(j<0?99:j)||String(a.name).localeCompare(b.name);};
   return `<div class="filters"><h2 class="ihead" style="margin:0">People</h2>${state.readOnly?"":`<button class="btn" type="button" data-act="people-edit" style="margin-left:auto">Edit people</button>`}</div>
@@ -1032,15 +1048,22 @@ document.addEventListener("click",e=>{
       if(!b.classList.contains("armed")){b.classList.add("armed");b.textContent="Confirm";setTimeout(()=>{if(b.isConnected){b.classList.remove("armed");b.textContent="Remove";}},3500);return;}
       put("ideas",b.dataset.id,null);return;}
     case"starter":STARTER_IDEAS.forEach(([title,areas])=>put("activities",newId(),unplanned(title,areas,"",[])));toast(STARTER_IDEAS.length+" ideas added.");return;
-    case"settings":["groupsSec","pinForm","histSec","forgetSec"].forEach(x=>$("#"+x).hidden=!!state.readOnly);$("#roSec").hidden=!state.readOnly;$("#wardLink").value=wardLink();$("#groupsText").value=groups().join("\n");$("#setModal").hidden=false;return;
+    case"settings":$("#setupSel").value=setupOf();$("#ward1").value=wardNames()[0];$("#ward2").value=wardNames()[1];$("#dualNames").hidden=setupOf()!=="dual";["setupSec","groupsSec","pinForm","histSec","forgetSec"].forEach(x=>$("#"+x).hidden=!!state.readOnly);$("#roSec").hidden=!state.readOnly;$("#wardLink").value=wardLink();$("#groupsText").value=groups().join("\n");$("#setModal").hidden=false;return;
     case"close-settings":$("#setModal").hidden=true;return;
     case"copy-link":copyText(wardLink(),$("#wardLink"));return;
+    case"save-setup":{const v=$("#setupSel").value,w=[$("#ward1").value.trim()||"Ward 1",$("#ward2").value.trim()||"Ward 2"];
+      const g=v==="dual"?dualGroups(w):DEFAULT_GROUPS.slice(),cur=groups();
+      const same=g.length===cur.length&&g.every((x,i)=>x===cur[i]);
+      if(!same&&!confirm("Replace your groups with the "+(v==="dual"?"dual":"single")+" ward set?\n\n"+g.join("\n")+"\n\nExisting activities keep their group names."))return;
+      state.meta={...state.meta,setup:v,wards:v==="dual"?w:state.meta.wards,groups:g};put("meta","ward",{...state.meta});
+      $("#groupsText").value=g.join("\n");toast("Setup saved.");return;}
     case"save-groups":{const g=[...new Set($("#groupsText").value.split(/\n/).map(s=>s.trim()).filter(Boolean))];if(!g.length){toast("Add at least one group.");return;}
       state.meta={...state.meta,groups:g};put("meta","ward",{...state.meta});toast("Groups saved.");return;}
     case"forget":savePin(null);location.reload();return;
   }
 });
 document.addEventListener("change",e=>{
+  if(e.target.id==="setupSel"){$("#dualNames").hidden=e.target.value!=="dual";return;}
   const t=e.target;
   if(t.id==="fGroup"){state.group=t.value;render();}
   else if(t.id==="fWhen"){state.when=t.value;render();}
