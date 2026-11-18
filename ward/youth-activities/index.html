@@ -163,6 +163,17 @@ td.emp.over{outline:2px dashed var(--accent)!important;outline-offset:-4px;backg
 .popt span{margin-left:auto;color:var(--muted);font-size:.75rem}
 .popt.on,.popt:hover{background:color-mix(in srgb,var(--accent) 14%,var(--surface))}
 .popt.none{color:var(--muted);cursor:default}
+.whogrid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.vhead{display:flex;gap:12px;align-items:flex-start;padding:12px 16px}.vhead .linkbtn{margin-left:auto}
+.vsum{display:flex;flex-wrap:wrap;gap:6px 18px;padding:10px 16px;font-size:.875rem;position:sticky;top:0;z-index:5}
+.vbtn{border:1.5px solid var(--line-2);border-radius:999px;background:var(--surface);padding:4px 10px;font-size:.8125rem;font-weight:600;color:var(--ink-2);white-space:nowrap}
+.vbtn.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 18%,var(--surface));color:var(--ink)}
+.vrank{margin:0;padding-left:1.4rem;display:flex;flex-direction:column;gap:6px}
+.vrank li{display:flex;gap:10px;align-items:center}.vrank li>span,.vrank li>div{flex:1;min-width:0}
+.vrank.big li{padding:6px 0;border-bottom:1px solid var(--line)}.vrank .vt{font-weight:600}
+.vwho{font-size:.75rem;margin-top:2px}
+.vpts{color:var(--accent);font-weight:700}
+body.youth #newBtn{display:none}
 .whois{font-size:0.7813rem;color:var(--muted);margin-top:3px}
 .cal tr.mrow td{font:700 0.9375rem var(--display);color:var(--ink);background:var(--bg);padding:12px 8px 6px;border-bottom:1px solid var(--line-2)}
 .cal tr.today .dcol{color:var(--accent)}
@@ -345,6 +356,7 @@ html,body{overflow-x:clip}
     <button type="button" data-view="balance" aria-pressed="false">Stats</button>
     <button type="button" data-view="ideas" aria-pressed="false">Ideas</button>
     <button type="button" data-view="people" aria-pressed="false">People</button>
+    <button type="button" data-view="vote" aria-pressed="false">Vote</button>
   </div>
   <div class="arealegend" id="areaBar" role="group" aria-label="Show only these areas"></div>
   <div class="topright">
@@ -509,7 +521,7 @@ const FSY_IDEAS=[
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const state={breakQ:(()=>{try{return localStorage.getItem("youth-activities-breakq")||"quorum";}catch(e){return "quorum";}})(),breakYW:(()=>{try{return localStorage.getItem("youth-activities-breakyw")||"ward";}catch(e){return "ward";}})(),people:[],nights:{},peopleEdit:false,sideAreas:new Set(),hide:(()=>{try{return new Set(JSON.parse(localStorage.getItem("youth-activities-hide")||"[]"));}catch(e){return new Set();}})(),activities:new Map(),ideas:new Map(),meta:{},ready:false,view:"calendar",group:"",when:"all",areas:new Set(),period:"term",bank:"all",editing:null,layout:(()=>{try{return localStorage.getItem("youth-activities-layout")||"grid";}catch(e){return "grid";}})()};
+const state={youth:false,votes:{},tally:null,voted:0,myTop:[],myMore:[],youthPinSet:false,me:null,sugAreas:new Set(),breakQ:(()=>{try{return localStorage.getItem("youth-activities-breakq")||"quorum";}catch(e){return "quorum";}})(),breakYW:(()=>{try{return localStorage.getItem("youth-activities-breakyw")||"ward";}catch(e){return "ward";}})(),people:[],nights:{},peopleEdit:false,sideAreas:new Set(),hide:(()=>{try{return new Set(JSON.parse(localStorage.getItem("youth-activities-hide")||"[]"));}catch(e){return new Set();}})(),activities:new Map(),ideas:new Map(),meta:{},ready:false,view:"calendar",group:"",when:"all",areas:new Set(),period:"term",bank:"all",editing:null,layout:(()=>{try{return localStorage.getItem("youth-activities-layout")||"grid";}catch(e){return "grid";}})()};
 let ward=null,pin=null,owner=null,rev=0,pending=[],flushing=false,flushTimer=0,loading=false;
 const PIN_KEY="youth-activities-pin",WARD_KEY="youth-activities-ward";
 
@@ -532,6 +544,11 @@ const statusName=s=>(STATUSES.find(x=>x[0]===s)||[,s])[1];
 function copyText(txt,input){const fb=()=>{if(input){input.focus();input.select();}toast("Press Ctrl+C (or ⌘C) to copy.");};try{navigator.clipboard.writeText(txt).then(()=>toast("Link copied."),fb);}catch(e){fb();}}
 
 /* ---------- storage: the Youth Activities Apps Script ---------- */
+const ROLE_KEY="youth-activities-role",ME_KEY="youth-activities-me";
+function getRole(){try{return localStorage.getItem(ROLE_KEY+":"+ward);}catch(e){return null;}}
+function saveRole(r){try{r?localStorage.setItem(ROLE_KEY+":"+ward,r):localStorage.removeItem(ROLE_KEY+":"+ward);}catch(e){}}
+function getMe(){try{return localStorage.getItem(ME_KEY+":"+ward);}catch(e){return null;}}
+function saveMe(id){try{id?localStorage.setItem(ME_KEY+":"+ward,id):localStorage.removeItem(ME_KEY+":"+ward);}catch(e){}}
 function getPin(){try{return localStorage.getItem(PIN_KEY+":"+ward);}catch(e){return null;}}
 function savePin(p){try{p?localStorage.setItem(PIN_KEY+":"+ward,p):localStorage.removeItem(PIN_KEY+":"+ward);}catch(e){}}
 const normCode=c=>String(c||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
@@ -544,18 +561,21 @@ const wardLink=()=>location.origin+location.pathname+"#"+ward;
 async function api(fn,args){
   let r;
   // Without a PIN the planner is view-only and reads through the public calls.
-  if(state.readOnly&&(fn==="getAll"||fn==="getRev"))fn+="Public";
-  try{r=await fetch(API_URL,{method:"POST",body:JSON.stringify({fn,args:args||[],ward,pin:state.readOnly?"":pin,owner}),redirect:"follow"});}
+  // With the youth PIN, youth read through their own calls (no other people's votes).
+  if(state.youth&&(fn==="getAll"||fn==="getRev")){if(fn==="getAll")args=[state.me||""];fn=fn==="getAll"?"getAllYouth":"getRevYouth";}
+  else if(state.readOnly&&(fn==="getAll"||fn==="getRev"))fn+="Public";
+  try{r=await fetch(API_URL,{method:"POST",body:JSON.stringify({fn,args:args||[],ward,pin:state.readOnly&&!state.youth?"":pin,owner}),redirect:"follow"});}
   catch(e){throw{code:"net",message:"No connection"};}
   if(!r.ok)throw{code:"net",message:"Server error "+r.status};
   let j;try{j=await r.json();}catch(e){throw{code:"net",message:"Unexpected reply"};}
   if(!j.ok)throw{code:j.code||"error",message:j.error||"Something went wrong"};
   return j.result;
 }
-const authError=err=>err&&(err.code==="pin"||err.code==="locked"||err.code==="noward");
+const authError=err=>err&&(err.code==="pin"||err.code==="locked"||err.code==="noward"||err.code==="youthpin");
 function apiFailed(err){
   if(err&&err.code==="noward"){savePin(null);setWard(null);showGate(err.message);return;}
-  if(authError(err)){savePin(null);pin=null;state.readOnly=true;toast("That PIN no longer works, so the planner is view-only. Enter the PIN to edit.");loadAll().catch(()=>{});return;}
+  if(err&&err.code==="youthpin"){state.youth=true;state.readOnly=true;saveRole("youth");state.view="vote";loadAll().catch(()=>{});return;}
+  if(authError(err)){savePin(null);saveRole(null);pin=null;state.youth=false;state.readOnly=true;toast("That PIN no longer works, so the planner is view-only. Enter the PIN to edit.");loadAll().catch(()=>{});return;}
   toast(err&&err.code==="net"?"Can't reach the planner. Check your connection; your last change may not have saved.":"A change didn't save: "+(err&&err.message||"unknown error"));
   loadAll().catch(()=>{});
 }
@@ -581,6 +601,12 @@ function capitaliseQuorums(){
   if(g&&g.some(x=>capQ(x)!==x)){state.meta={...state.meta,groups:g.map(capQ)};put("meta","ward",{...state.meta});}
   for(const[id,a]of state.activities)if(capQ(a.group)!==a.group)put("activities",id,{...a,group:capQ(a.group)});
 }
+const personId=()=>"p"+Math.random().toString(36).slice(2,10);
+function givePeopleIds(){
+  if(!state.people.some(p=>!p.id))return;
+  state.people=state.people.map(p=>p.id?p:{...p,id:personId()});
+  put("meta","people",{list:state.people});
+}
 function moveIdeasToActivities(){
   if(!state.ideas.size)return;
   for(const[id,i]of[...state.ideas]){
@@ -599,9 +625,12 @@ async function loadAll(){
     state.meta=(all.meta&&all.meta.ward)||{};
     state.people=(all.meta&&all.meta.people&&all.meta.people.list)||[];
     state.nights=(all.meta&&all.meta.nights&&all.meta.nights.map)||{};
+    state.votes=all.votes||{};state.youthPinSet=!!all.youthPin;
+    if(state.youth){state.tally=all.tally||null;state.voted=all.voted||0;
+      if(!voteSaving){const v=all.myVotes||{};state.myTop=v.top||[];state.myMore=v.more||[];}}
     rev=all.rev||0;state.ready=true;
     render();
-    if(!state.readOnly){moveIdeasToActivities();addYoungWomenClasses();capitaliseQuorums();}
+    if(!state.readOnly){moveIdeasToActivities();addYoungWomenClasses();capitaliseQuorums();givePeopleIds();}
   }finally{loading=false;}
 }
 function put(col,id,body){
@@ -632,14 +661,16 @@ document.addEventListener("visibilitychange",poll);
 
 /* ---------- render ---------- */
 function render(){
-  document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.view===state.view)));
+  document.querySelectorAll(".tabs button").forEach(b=>{b.setAttribute("aria-pressed",String(b.dataset.view===state.view));
+    const v=b.dataset.view;b.hidden=v==="vote"?(state.readOnly&&!state.youth):(state.youth&&(v==="people"||v==="balance"));});
+  document.body.classList.toggle("youth",!!state.youth);
   applyColours();
   $("#areaBar").innerHTML=AREAS.map(([a,l])=>`<button class="abtn a-${a}" type="button" data-act="filter-area" data-area="${a}" aria-pressed="${state.areas.has(a)}">${l}</button>`).join("");
   document.body.classList.toggle("ro",!!state.readOnly);
   $("#newBtn").hidden=!!state.readOnly;$("#pinBtn").hidden=!state.readOnly||!state.ready;
   const m=$("#main");
   if(!state.ready){m.innerHTML=`<div class="panel empty"><p>Loading…</p></div>`;return;}
-  m.innerHTML=state.view==="balance"?renderBalance():state.view==="ideas"?renderIdeas():state.view==="people"?renderPeople():renderCalendar();
+  m.innerHTML=state.view==="balance"?renderBalance():state.view==="ideas"?renderIdeas():state.view==="people"?renderPeople():state.view==="vote"?renderVote():renderCalendar();
 }
 function areaChips(sel,act){
   return AREAS.map(([a,l])=>`<button class="chip" type="button" data-act="${act}" data-area="${a}" aria-pressed="${sel.has(a)}"><span class="dot ${a}"></span>${l}</button>`).join("");
@@ -934,6 +965,82 @@ document.addEventListener("keydown",e=>{
 },true);
 document.addEventListener("mousedown",e=>{const o=e.target.closest&&e.target.closest("#planList .popt[data-pi]");if(o){e.preventDefault();planPick(planHits[+o.dataset.pi]);}
   else if($("#planList")&&!e.target.closest("#planPick,#planList"))$("#planList").hidden=true;});
+/* ---------- voting: each young person picks 3 top ideas (2 points each) and 2 more (1 point) ---------- */
+let voteSaving=false,voteTimer=0;
+const ballot=()=>[...state.activities.entries()].filter(([,a])=>!a.date&&a.status!=="cancelled").sort((x,y)=>String(x[1].title).localeCompare(y[1].title));
+function tallyNow(){
+  if(state.youth)return state.tally;
+  const t={};
+  for(const v of Object.values(state.votes||{})){
+    (v.top||[]).forEach(id=>{const a=state.activities.get(id);if(a&&!a.date){t[id]=t[id]||{p:0,top:0,n:0};t[id].p+=2;t[id].top++;t[id].n++;}});
+    (v.more||[]).forEach(id=>{const a=state.activities.get(id);if(a&&!a.date){t[id]=t[id]||{p:0,top:0,n:0};t[id].p+=1;t[id].n++;}});
+  }
+  return t;
+}
+function voteBadge(id){const t=!state.youth&&!state.readOnly&&tallyNow()[id];return t?` · <b class="vpts">★ ${t.p} pt${t.p===1?"":"s"}</b>`:"";}
+const youthPeople=()=>state.people.filter(p=>p.id&&p.kind!=="leader");
+function renderVote(){
+  return state.youth?renderBallot():renderResults();
+}
+function renderBallot(){
+  const me=youthPeople().find(p=>p.id===state.me);
+  if(!me){
+    const yp=youthPeople().slice().sort((a,b)=>String(a.name).localeCompare(b.name));
+    if(!yp.length)return `<div class="panel empty"><h2>Almost ready</h2><p>Your leaders need to add the youth to the People list before you can vote.</p></div>`;
+    const grp=k=>yp.filter(p=>p.kind===k).map(p=>`<button class="btn" type="button" data-act="pick-me" data-pid="${esc(p.id)}">${esc(nameInitial(p))}${setupOf()==="dual"&&p.ward?` <span class="muted">${esc(p.ward)}</span>`:""}</button>`).join("");
+    return `<div class="panel" style="padding:16px"><h2 class="ihead" style="margin-top:0">Who are you?</h2><p class="muted">Pick your name so your votes are yours. This phone will remember you.</p>
+      ${yp.some(p=>p.kind==="yw")?`<h3 class="eyebrow">Young Women</h3><div class="whogrid">${grp("yw")}</div>`:""}
+      ${yp.some(p=>p.kind==="ym")?`<h3 class="eyebrow">Young Men</h3><div class="whogrid">${grp("ym")}</div>`:""}</div>`;
+  }
+  const items=ballot(),t=state.tally;
+  const name=id=>{const a=state.activities.get(id);return a?esc(a.title):"";};
+  let h=`<div class="panel vhead"><div><h2 class="ihead" style="margin:0">Hi ${esc(me.name)}!</h2>
+      <p class="muted" style="margin:4px 0 0">Pick your <b>top 3</b> ideas, then <b>2 more</b> you'd also enjoy. Change them any time.</p></div>
+      <button class="linkbtn" type="button" data-act="not-me">Not ${esc(me.name)}?</button></div>
+    <div class="vsum panel"><span><b>Top 3</b> ${state.myTop.length}/3: ${state.myTop.map(name).join(", ")||"none yet"}</span>
+      <span><b>2 more</b> ${state.myMore.length}/2: ${state.myMore.map(name).join(", ")||"none yet"}</span></div>
+    <form class="panel addbar" id="suggestForm"><input id="sugTitle" maxlength="120" placeholder="Got an idea? Add it here" autocomplete="off" aria-label="Your idea">
+      <div class="areas">${areaChips(state.sugAreas,"sug-area")}</div>
+      <input id="sugNotes" maxlength="600" placeholder="What would you do? (optional)" autocomplete="off" aria-label="Details">
+      <button class="btn primary" type="submit">Add my idea</button></form>`;
+  if(t){
+    const ranked=Object.entries(t).filter(([id])=>state.activities.get(id)).sort((x,y)=>y[1].p-x[1].p||y[1].top-x[1].top).slice(0,10);
+    if(ranked.length)h+=`<section class="panel" style="padding:12px 16px"><h2 class="ihead" style="margin-top:0">Results so far</h2><ol class="vrank">${ranked.map(([id,r])=>`<li><span>${name(id)}</span><b>${r.p} pt${r.p===1?"":"s"}</b></li>`).join("")}</ol></section>`;
+  }
+  if(!items.length)return h+`<div class="panel empty"><p>No ideas to vote on yet. Add one above!</p></div>`;
+  return h+`<section><div class="ideagrid">${items.map(([id,a])=>{const top=state.myTop.includes(id),more=state.myMore.includes(id);
+    return ideaBlock(a,`${areaPills(a)||"No area yet"}${a.suggestedName?" · Idea from "+esc(a.suggestedName):""}`,
+      `<button class="vbtn${top?" on":""}" type="button" data-act="vote-top" data-id="${esc(id)}" aria-pressed="${top}">★ Top 3</button><button class="vbtn${more?" on":""}" type="button" data-act="vote-more" data-id="${esc(id)}" aria-pressed="${more}">+ 2 more</button>`);}).join("")}</div></section>`;
+}
+function renderResults(){
+  const t=tallyNow(),yp=youthPeople(),votedIds=Object.keys(state.votes||{});
+  const voted=yp.filter(p=>votedIds.includes(p.id)),notYet=yp.filter(p=>!votedIds.includes(p.id));
+  const ranked=Object.entries(t).filter(([id])=>state.activities.get(id)).sort((x,y)=>y[1].p-x[1].p||y[1].top-x[1].top);
+  const pickers=id=>yp.filter(p=>{const v=state.votes[p.id]||{};return (v.top||[]).includes(id)||(v.more||[]).includes(id);}).map(nameInitial).join(", ");
+  let h=`<div class="panel" style="padding:12px 16px"><h2 class="ihead" style="margin-top:0">Youth vote</h2>`;
+  h+=state.youthPinSet
+    ?`<p class="muted" style="margin:0 0 8px">Youth open the planner link with the <b>youth PIN</b>, pick their name, then choose their top 3 ideas and 2 more. They can also add ideas. They can't change anything else.</p>
+       <form class="inrow" id="youthPinForm"><input id="youthPin" type="password" inputmode="numeric" autocomplete="off" placeholder="New youth PIN" aria-label="New youth PIN"><button class="btn" type="submit">Change youth PIN</button><button class="btn" type="button" data-act="youth-pin-off">Turn off youth voting</button></form>`
+    :`<p class="muted" style="margin:0 0 8px">Set a <b>youth PIN</b> (different from the ward PIN) and share it with the youth along with the planner link. With it they can vote on ideas and add their own, but can't change anything else.</p>
+       <form class="inrow" id="youthPinForm"><input id="youthPin" type="password" inputmode="numeric" autocomplete="off" placeholder="Youth PIN (4–10 digits)" aria-label="Youth PIN"><button class="btn primary" type="submit">Set youth PIN</button></form>`;
+  h+=`<p class="err" id="youthPinErr" role="alert"></p>
+    <div class="filters"><span><b>${voted.length}</b> of ${yp.length} youth have voted</span>
+    <button class="btn" type="button" data-act="toggle-showvotes" style="margin-left:auto">${state.meta.showVotes?"Hide results from youth":"Show results to youth"}</button>
+    ${votedIds.length?`<button class="btn danger" type="button" data-act="clear-votes">Clear all votes</button>`:""}</div></div>`;
+  h+=ranked.length?`<section class="panel" style="padding:12px 16px"><h2 class="ihead" style="margin-top:0">Favourite ideas</h2><p class="muted" style="margin:0 0 8px">A top-3 pick is 2 points; each of the 2 more is 1 point. Plan an idea and it leaves the vote.</p>
+      <ol class="vrank big">${ranked.map(([id,r])=>{const a=state.activities.get(id);return `<li><div><span class="vt">${esc(a.title)}</span> ${areaPills(a)}<div class="muted vwho">${r.top} top pick${r.top===1?"":"s"} · ${r.n} vote${r.n===1?"":"s"}${pickers(id)?" · "+esc(pickers(id)):""}</div></div><b>${r.p} pt${r.p===1?"":"s"}</b><button class="mini" type="button" data-act="edit" data-id="${esc(id)}" data-focus="date">Plan</button></li>`;}).join("")}</ol></section>`
+    :`<div class="panel empty"><p>No votes yet.</p></div>`;
+  if(yp.length)h+=`<section class="panel" style="padding:12px 16px"><p style="margin:0"><b>Voted:</b> ${voted.map(p=>esc(nameInitial(p))).join(", ")||"nobody yet"}</p><p style="margin:6px 0 0"><b>Not yet:</b> ${notYet.map(p=>esc(nameInitial(p))).join(", ")||"everyone has voted"}</p></section>`;
+  return h;
+}
+function saveVotes(){
+  voteSaving=true;clearTimeout(voteTimer);
+  voteTimer=setTimeout(async()=>{
+    try{rev=await api("vote",[state.me,state.myTop,state.myMore]);toast("Votes saved.");}
+    catch(err){toast(err.message||"Couldn't save your votes. Try again.");}
+    finally{voteSaving=false;}
+  },500);
+}
 function renderCalendar(){
   const today=todayIso();
   let list=sortedActivities().filter(([,a])=>{
@@ -1053,7 +1160,7 @@ function renderIdeas(){
   if(!all.length)return h+`<div class="panel empty"><h2>No ideas yet</h2><p>Start with ${STARTER_IDEAS.length} suggestions across the four areas, then add your own.</p><button class="btn primary" type="button" data-act="starter">Add starter ideas</button></div>`+fsySection();
   if(!list.length)return h+`<div class="panel empty"><p>Nothing matches these filters.</p></div>`+fsySection();
   return h+`<section><div class="ideagrid">${list.map(([id,a])=>{const[k,label]=lifeOf(a);
-    return ideaBlock(a,`<span class="life l-${k}">${esc(label)}</span> ${areaPills(a)||"· No area yet"}${linkMeta(a)}`,
+    return ideaBlock(a,`<span class="life l-${k}">${esc(label)}</span> ${areaPills(a)||"· No area yet"}${linkMeta(a)}${a.suggestedName?" · Idea from "+esc(a.suggestedName):""}${voteBadge(id)}`,
       k==="unplanned"?`<button class="mini" type="button" data-act="edit" data-id="${esc(id)}" data-focus="date">Plan</button>`:`<button class="mini" type="button" data-act="plan-again" data-id="${esc(id)}">Plan again</button>`,id);}).join("")}</div></section>`+fsySection();
 }
 
@@ -1147,7 +1254,7 @@ document.addEventListener("click",e=>{
     case"night":openNight(b.dataset.date,b);return;
     case"people-edit":state.peopleEdit=true;render();return;
     case"people-done":state.peopleEdit=false;state.people=state.people.filter(p=>p.code||p.name);put("meta","people",{list:state.people});return;
-    case"person-add":state.people=[...state.people,{code:"",name:"",ward:"",kind:"yw",role:""}];render();{const ins=document.querySelectorAll('[data-pf="code"]');if(ins.length)ins[ins.length-1].focus();}return;
+    case"person-add":state.people=[...state.people,{id:personId(),code:"",name:"",ward:"",kind:"yw",role:""}];render();{const ins=document.querySelectorAll('[data-pf="code"]');if(ins.length)ins[ins.length-1].focus();}return;
     case"person-del":state.people=state.people.filter((_,i)=>i!==+b.dataset.i);put("meta","people",{list:state.people});return;
     case"view":state.view=b.dataset.view;render();return;
     case"enter-pin":$("#setModal").hidden=true;showGate("");return;
@@ -1157,6 +1264,19 @@ document.addEventListener("click",e=>{
     case"show-past":state.when="past";render();return;
     case"show-all":state.group="";state.areas.clear();state.hide.clear();state.when="all";try{localStorage.setItem("youth-activities-hide","[]");}catch(err){}render();return;
     case"plan-del":{const t=planTokens($("#fPlan").value);t.splice(+b.dataset.i,1);planSet(t);return;}
+    case"pick-me":state.me=b.dataset.pid;saveMe(state.me);state.myTop=[];state.myMore=[];render();loadAll().catch(()=>{});return;
+    case"not-me":state.me=null;saveMe(null);state.myTop=[];state.myMore=[];render();return;
+    case"vote-top":case"vote-more":{const id=b.dataset.id,top=act==="vote-top",L=top?state.myTop:state.myMore,O=top?state.myMore:state.myTop,max=top?3:2;
+      if(L.includes(id))L.splice(L.indexOf(id),1);
+      else{if(L.length>=max){toast(top?"You've picked 3 top ideas. Untick one first.":"You've picked 2 more. Untick one first.");return;}
+        if(O.includes(id))O.splice(O.indexOf(id),1);L.push(id);}
+      render();saveVotes();return;}
+    case"sug-area":{const a=b.dataset.area;state.sugAreas.has(a)?state.sugAreas.delete(a):state.sugAreas.add(a);const t=$("#sugTitle").value,n=$("#sugNotes").value;render();$("#sugTitle").value=t;$("#sugNotes").value=n;return;}
+    case"toggle-showvotes":state.meta={...state.meta,showVotes:!state.meta.showVotes};put("meta","ward",{...state.meta});return;
+    case"clear-votes":if(!confirm("Clear every youth's votes? This can't be undone."))return;
+      for(const id of Object.keys(state.votes))pending.push({col:"votes",id,body:null});state.votes={};clearTimeout(flushTimer);flushTimer=setTimeout(flush,100);render();toast("Votes cleared.");return;
+    case"youth-pin-off":if(!confirm("Turn off youth voting? The youth PIN will stop working."))return;
+      api("setYouthPin",[""]).then(()=>{state.youthPinSet=false;render();toast("Youth PIN removed.");}).catch(err=>toast(err.message));return;
     case"break-flip":{if(b.dataset.side==="q"){state.breakQ=state.breakQ==="ward"?"quorum":"ward";try{localStorage.setItem("youth-activities-breakq",state.breakQ);}catch(err){}}
       else{state.breakYW=state.breakYW==="age"?"ward":"age";try{localStorage.setItem("youth-activities-breakyw",state.breakYW);}catch(err){}}render();return;}
     case"break":{const k=b.dataset.k;if(b.dataset.side==="q"){state.breakQ=k;try{localStorage.setItem("youth-activities-breakq",k);}catch(err){}}
@@ -1244,6 +1364,21 @@ $("#editForm").addEventListener("submit",e=>{
   closeEditor();toast(a.date?"Saved.":"Saved to the ideas bank (no date yet).");
 });
 document.addEventListener("submit",e=>{
+  if(e.target.id==="suggestForm"){
+    e.preventDefault();const t=$("#sugTitle").value.trim();if(t.length<3){toast("Give your idea a name.");return;}
+    const btn=e.target.querySelector("button[type=submit]");btn.disabled=true;
+    api("suggest",[state.me,t,[...state.sugAreas],$("#sugNotes").value.trim()])
+      .then(r=>{state.sugAreas=new Set();toast("Thanks! Your idea is in.");return loadAll();})
+      .catch(err=>toast(err.message||"Couldn't add your idea."))
+      .finally(()=>{btn.disabled=false;});
+    return;
+  }
+  if(e.target.id==="youthPinForm"){
+    e.preventDefault();const v=$("#youthPin").value.trim();
+    api("setYouthPin",[v]).then(()=>{state.youthPinSet=true;$("#youthPinErr").textContent="";render();toast("Youth PIN set. Share it with the youth.");})
+      .catch(err=>{$("#youthPinErr").textContent=err.message||"Couldn't set the youth PIN.";});
+    return;
+  }
   if(e.target.id==="ideaForm"){
     e.preventDefault();const v=$("#ideaTitle").value.trim();if(!v)return;
     put("activities",newId(),unplanned(v,[...(state.newIdeaAreas||[])],"",[]));
@@ -1257,8 +1392,8 @@ function showGate(msg){
   const known=!!ward;
   $("#gate").hidden=false;$("#gateForm").hidden=false;$("#regDone").hidden=true;
   $("#gateCode").hidden=known;$("#gateOther").hidden=!known;$("#regForm").hidden=known;
-  $("#gateHead").textContent=known?"Enter your ward PIN":"Open your ward";
-  $("#gateText").textContent=known?"Ward "+ward+". You only need to do this once on this phone.":"Enter the ward code from your link, and your PIN.";
+  $("#gateHead").textContent=known?"Enter your PIN":"Open your ward";
+  $("#gateText").textContent=known?"Ward "+ward+". Leaders use the ward PIN; youth use the youth PIN to vote and add ideas. You only need to do this once on this phone.":"Enter the ward code from your link, and your PIN.";
   $("#gateErr").textContent=msg||"";$("#gatePin").value="";
   $("#gateView").hidden=!(known&&state.ready);
   setTimeout(()=>(known?$("#gatePin"):$("#gateCode")).focus(),50);
@@ -1271,9 +1406,17 @@ $("#gateForm").addEventListener("submit",async e=>{
   try{
     pin=v;const code=known||normCode($("#gateCode").value);
     if(!code)throw{code:"noward",message:"Enter the ward code from your link."};
-    ward=code;const wasRO=state.readOnly;state.readOnly=false;
-    try{await loadAll();}catch(err){state.readOnly=wasRO;throw err;}
-    setWard(code);savePin(v);$("#gate").hidden=true;render();toast("You can edit now.");
+    ward=code;const wasRO=state.readOnly;state.readOnly=false;state.youth=false;
+    let asYouth=false;
+    try{await loadAll();}
+    catch(err){
+      if(err.code!=="youthpin"){state.readOnly=wasRO;throw err;}
+      state.youth=true;state.readOnly=true;state.me=getMe();asYouth=true;
+      try{await loadAll();}catch(e2){state.youth=false;state.readOnly=wasRO;throw e2;}
+    }
+    setWard(code);savePin(v);saveRole(asYouth?"youth":"leader");$("#gate").hidden=true;
+    if(asYouth)state.view="vote";
+    render();toast(asYouth?"You can vote and add ideas now.":"You can edit now.");
   }catch(err){ward=known;$("#gateErr").textContent=gateMsg(err);}
   finally{btn.disabled=false;btn.textContent="Open planner";}
 });
@@ -1332,7 +1475,10 @@ window.addEventListener("hashchange",()=>location.reload());
   if(code)setWard(code);
   if(!ward){showGate();return;}
   pin=getPin();
-  state.readOnly=!pin;
+  state.youth=!!pin&&getRole()==="youth";
+  state.readOnly=!pin||state.youth;
+  state.me=getMe();
+  if(state.youth)state.view="vote";
   loadAll().catch(err=>{if(authError(err))apiFailed(err);else toast("Can't reach the planner. Check your connection, then reload.");});
 })();
 })();
