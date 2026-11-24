@@ -176,6 +176,7 @@ td.emp.over{outline:2px dashed var(--accent)!important;outline-offset:-4px;backg
 .signups li{display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line)}.signups li>span{flex:1}
 .signups summary{cursor:pointer;font-weight:600;font-size:.875rem;margin-bottom:4px}
 .sfilt{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}.sfilt .lay button{padding:4px 8px;font-size:.75rem}.sfilt .vbtn{font-size:.75rem}
+.myedit{display:flex;flex-direction:column;gap:8px;padding:10px}.myedit .metitle{font:inherit;padding:7px 9px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface);color:var(--ink)}
 .csec{margin:0 0 8px}.csec>summary{cursor:pointer;font-weight:600;padding:6px 0}.csec .ideagrid{margin-top:6px}
 .vpts{color:var(--accent);font-weight:700}
 body.youth #newBtn{display:none}
@@ -702,7 +703,7 @@ const FSY_IDEAS=[
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const state={whereF:"",sugWhere:"",youth:false,votes:{},tally:null,voted:0,myTop:[],myMore:[],youthPinSet:false,me:null,sugAreas:new Set(),breakQ:(()=>{try{return localStorage.getItem("youth-activities-breakq")||"quorum";}catch(e){return "quorum";}})(),breakYW:(()=>{try{return localStorage.getItem("youth-activities-breakyw")||"ward";}catch(e){return "ward";}})(),people:[],nights:{},peopleEdit:false,sideAreas:new Set(),hide:(()=>{try{return new Set(JSON.parse(localStorage.getItem("youth-activities-hide")||"[]"));}catch(e){return new Set();}})(),activities:new Map(),ideas:new Map(),meta:{},ready:false,view:"calendar",group:"",when:"all",areas:new Set(),period:"term",bank:"all",editing:null,layout:(()=>{try{return localStorage.getItem("youth-activities-layout")||"grid";}catch(e){return "grid";}})()};
+const state={editMine:null,whereF:"",sugWhere:"",youth:false,votes:{},tally:null,voted:0,myTop:[],myMore:[],youthPinSet:false,me:null,sugAreas:new Set(),breakQ:(()=>{try{return localStorage.getItem("youth-activities-breakq")||"quorum";}catch(e){return "quorum";}})(),breakYW:(()=>{try{return localStorage.getItem("youth-activities-breakyw")||"ward";}catch(e){return "ward";}})(),people:[],nights:{},peopleEdit:false,sideAreas:new Set(),hide:(()=>{try{return new Set(JSON.parse(localStorage.getItem("youth-activities-hide")||"[]"));}catch(e){return new Set();}})(),activities:new Map(),ideas:new Map(),meta:{},ready:false,view:"calendar",group:"",when:"all",areas:new Set(),period:"term",bank:"all",editing:null,layout:(()=>{try{return localStorage.getItem("youth-activities-layout")||"grid";}catch(e){return "grid";}})()};
 let ward=null,pin=null,owner=null,rev=0,pending=[],flushing=false,flushTimer=0,loading=false;
 const PIN_KEY="youth-activities-pin",WARD_KEY="youth-activities-ward";
 
@@ -1174,9 +1175,18 @@ function mergeTally(raw){
   return t;
 }
 const ballot=()=>[...state.activities.entries()].filter(([,a])=>!a.date&&a.status!=="cancelled").sort((x,y)=>String(x[1].title).localeCompare(y[1].title));
+const normTitle=t=>String(t||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+/** Another idea already has this name: an unplanned ward idea, or a built-in idea not yet in the bank. */
+function duplicateOf(title,exceptId){
+  const n=normTitle(title);if(!n)return null;
+  for(const[id,a]of state.activities)if(id!==exceptId&&!a.date&&normTitle(a.title)===n)return a;
+  for(const[,i]of builtinBallot())if(normTitle(i.title)===n)return i;
+  return null;
+}
 function builtinBallot(){
   const have=new Set([...state.activities.values()].flatMap(a=>linksOf(a)));
-  return [...builtins()].filter(([,i])=>!have.has(i.url));
+  const names=new Set([...state.activities.values()].filter(a=>!a.date).map(a=>normTitle(a.title)));
+  return [...builtins()].filter(([,i])=>!have.has(i.url)&&!names.has(normTitle(i.title)));
 }
 function tallyNow(){
   if(state.youth)return state.tally&&mergeTally(state.tally);
@@ -1219,8 +1229,12 @@ function renderBallot(){
     const ranked=Object.entries(t).filter(([id])=>ideaOf(id)).sort((x,y)=>y[1].p-x[1].p||y[1].top-x[1].top).slice(0,10);
     if(ranked.length)h+=`<section class="panel" style="padding:12px 16px"><h2 class="ihead" style="margin-top:0">Results so far</h2><ol class="vrank">${ranked.map(([id,r])=>`<li><span>${name(id)}</span><b>${r.p} vote${r.p===1?"":"s"}</b></li>`).join("")}</ol></section>`;
   }
-  const vbtn=id=>{const on=state.myTop.includes(id);return `<button class="vbtn${on?" on":""}" type="button" data-act="vote-top" data-id="${esc(id)}" aria-pressed="${on}">${on?"★ Voted":"☆ Vote"}</button>`;};
-  const block=(id,a)=>ideaBlock(a,`${areaPills(a)||"No area yet"}${a.suggestedName?" · Idea from "+esc(a.suggestedName):""}${a.issue?" · "+esc(a.issue):""}`,vbtn(id));
+  const vbtn=id=>{const on=state.myTop.includes(id),a=state.activities.get(id),mine=a&&me&&a.suggestedBy===me.id;return (mine?`<button class="mini" type="button" data-act="my-edit" data-id="${esc(id)}">Edit</button>`:"")+`<button class="vbtn${on?" on":""}" type="button" data-act="vote-top" data-id="${esc(id)}" aria-pressed="${on}">${on?"★ Voted":"☆ Vote"}</button>`;};
+  const mineEdit=(id,a)=>`<form class="panel myedit" data-id="${esc(id)}"><input class="metitle" maxlength="120" value="${esc(state.editMine.title)}" aria-label="Your idea">
+      <div class="areas">${areaChips(state.editMine.areas,"my-area")}</div>
+      <div class="lay" style="margin-left:0" role="group" aria-label="Inside or outside">${Object.entries(WHERE_NAMES).map(([k,l])=>`<button type="button" data-act="my-where" data-k="${k}" aria-pressed="${state.editMine.where===k}">${l}</button>`).join("")}</div>
+      <div class="formbtns"><button class="btn danger" type="button" data-act="my-del" data-id="${esc(id)}">Remove</button><button class="btn" type="button" data-act="my-cancel">Cancel</button><button class="btn primary" type="submit">Save</button></div></form>`;
+  const block=(id,a)=>state.editMine&&state.editMine.id===id?mineEdit(id,a):ideaBlock(a,`${areaPills(a)||"No area yet"}${a.suggestedName?" · Idea from "+esc(a.suggestedName):""}${a.issue?" · "+esc(a.issue):""}`,vbtn(id));
   h+=`<div class="filters">${whereFilters()}</div>`;
   h+=items.length?`<section><h2 class="ihead">Ideas from your ward</h2><div class="ideagrid">${items.map(([id,a])=>block(id,a)).join("")}</div></section>`:"";
   const fsy=built.filter(([,i])=>i.src==="fsy"),church=built.filter(([,i])=>i.src==="church");
@@ -1521,6 +1535,12 @@ document.addEventListener("click",e=>{
         if(O.includes(id))O.splice(O.indexOf(id),1);L.push(id);}
       render();saveVotes();return;}
     case"sug-area":{const a=b.dataset.area;state.sugAreas.has(a)?state.sugAreas.delete(a):state.sugAreas.add(a);const t=$("#sugTitle").value;render();$("#sugTitle").value=t;return;}
+    case"my-edit":{const a=state.activities.get(b.dataset.id);if(a)state.editMine={id:b.dataset.id,title:a.title,areas:new Set(a.areas||[]),where:a.where||""};render();return;}
+    case"my-cancel":state.editMine=null;render();return;
+    case"my-area":{const t=$(".myedit .metitle").value,x=b.dataset.area,S=state.editMine.areas;S.has(x)?S.delete(x):S.add(x);state.editMine.title=t;render();return;}
+    case"my-where":{state.editMine.title=$(".myedit .metitle").value;state.editMine.where=state.editMine.where===b.dataset.k?"":b.dataset.k;render();return;}
+    case"my-del":{if(!confirm("Remove your idea? Any votes for it go too."))return;
+      api("editIdea",[b.dataset.id,"",[],"",true]).then(()=>{state.editMine=null;toast("Idea removed.");return loadAll();}).catch(err=>toast(err.message||"Couldn't remove it."));return;}
     case"sug-where":{state.sugWhere=state.sugWhere===b.dataset.k?"":b.dataset.k;const t=$("#sugTitle").value;render();$("#sugTitle").value=t;return;}
     case"toggle-showvotes":state.meta={...state.meta,showVotes:!state.meta.showVotes};put("meta","ward",{...state.meta});return;
     case"clear-votes":if(!confirm("Clear every youth's votes? This can't be undone."))return;
@@ -1619,8 +1639,18 @@ $("#editForm").addEventListener("submit",e=>{
   closeEditor();toast(a.date?"Saved.":"Saved to the ideas bank (no date yet).");
 });
 document.addEventListener("submit",e=>{
+  if(e.target.classList&&e.target.classList.contains("myedit")){
+    e.preventDefault();const id=e.target.dataset.id,t=e.target.querySelector(".metitle").value.trim();
+    if(t.length<3){toast("Give your idea a name.");return;}
+    if(duplicateOf(t,id)){toast("That idea is already on the list.");return;}
+    api("editIdea",[id,t,[...state.editMine.areas],state.editMine.where,false])
+      .then(()=>{state.editMine=null;toast("Idea saved.");return loadAll();})
+      .catch(err=>toast(err.message||"Couldn't save your idea."));
+    return;
+  }
   if(e.target.id==="suggestForm"){
     e.preventDefault();const t=$("#sugTitle").value.trim();if(t.length<3){toast("Give your idea a name.");return;}
+    if(duplicateOf(t)){toast("That idea is already on the list. Vote for it instead!");return;}
     const btn=e.target.querySelector("button[type=submit]");btn.disabled=true;
     api("suggest",[t,[...state.sugAreas],"",state.sugWhere])
       .then(r=>{state.sugAreas=new Set();state.sugWhere="";toast("Thanks! Your idea is in.");return loadAll();})
@@ -1636,6 +1666,7 @@ document.addEventListener("submit",e=>{
   }
   if(e.target.id==="ideaForm"){
     e.preventDefault();const v=$("#ideaTitle").value.trim();if(!v)return;
+    if(duplicateOf(v)){toast("That idea is already in the list.");return;}
     put("activities",newId(),unplanned(v,[...(state.newIdeaAreas||[])],"",[]));
     state.newIdeaAreas=new Set();render();setTimeout(()=>{const i=$("#ideaTitle");if(i)i.focus();},0);
   }
