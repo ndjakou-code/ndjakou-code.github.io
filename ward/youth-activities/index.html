@@ -541,6 +541,8 @@ const groups=()=>(state.meta.groups&&state.meta.groups.length)?state.meta.groups
 const orderedAreas=x=>AREAS.map(([k])=>k).filter(k=>(x.areas||[]).includes(k));
 const areaName=a=>(AREAS.find(x=>x[0]===a)||[,a])[1];
 const statusName=s=>(STATUSES.find(x=>x[0]===s)||[,s])[1];
+/** A dated activity in the past is Done (unless it was cancelled). */
+const statusOf=a=>a.date&&a.date<todayIso()&&a.status!=="cancelled"?"done":(a.status||"planned");
 function copyText(txt,input){const fb=()=>{if(input){input.focus();input.select();}toast("Press Ctrl+C (or ⌘C) to copy.");};try{navigator.clipboard.writeText(txt).then(()=>toast("Link copied."),fb);}catch(e){fb();}}
 
 /* ---------- storage: the Youth Activities Apps Script ---------- */
@@ -607,6 +609,9 @@ function givePeopleIds(){
   state.people=state.people.map(p=>p.id?p:{...p,id:personId()});
   put("meta","people",{list:state.people});
 }
+function markPastDone(){
+  for(const[id,a]of state.activities)if(statusOf(a)!==(a.status||"planned")&&a.date)put("activities",id,{...a,status:"done"});
+}
 function moveIdeasToActivities(){
   if(!state.ideas.size)return;
   for(const[id,i]of[...state.ideas]){
@@ -630,7 +635,7 @@ async function loadAll(){
       if(!voteSaving){const v=all.myVotes||{};state.myTop=v.top||[];state.myMore=v.more||[];}}
     rev=all.rev||0;state.ready=true;
     render();
-    if(!state.readOnly){moveIdeasToActivities();addYoungWomenClasses();capitaliseQuorums();givePeopleIds();}
+    if(!state.readOnly){moveIdeasToActivities();addYoungWomenClasses();capitaliseQuorums();givePeopleIds();markPastDone();}
   }finally{loading=false;}
 }
 function put(col,id,body){
@@ -727,7 +732,7 @@ function evCell(list,colspan){
   const a0=list[0][1],ar=(a0.areas||[])[0];
   return `<td${colspan>1?` colspan="${colspan}"`:""} class="ev${ar?" a-"+ar:""}">${list.map(([id,a])=>{
     const ars=orderedAreas(a);
-    return `<button class="evb st-${esc(a.status||"planned")}" style="--n:${Math.max(1,ars.length)}" type="button" data-act="edit" data-id="${esc(id)}"><span class="evs" aria-hidden="true">${ars.length?ars.map(x=>`<i class="${x}"></i>`).join(""):"<i></i>"}</span><span class="evt">${esc(a.title||"Untitled")}</span><span class="evm">${esc(statusName(a.status||"planned"))}${colspan>1||!cols_.includes(a.group)?" · "+esc(groupLabel(a.group)):""}${a.planning?" · "+esc(plannerNames(a)):""}${areaPills(a)}</span></button>`;}).join("")}</td>`;
+    return `<button class="evb st-${esc(statusOf(a))}" style="--n:${Math.max(1,ars.length)}" type="button" data-act="edit" data-id="${esc(id)}"><span class="evs" aria-hidden="true">${ars.length?ars.map(x=>`<i class="${x}"></i>`).join(""):"<i></i>"}</span><span class="evt">${esc(a.title||"Untitled")}</span><span class="evm">${esc(statusName(statusOf(a)))}${colspan>1||!cols_.includes(a.group)?" · "+esc(groupLabel(a.group)):""}${a.planning?" · "+esc(plannerNames(a)):""}${areaPills(a)}</span></button>`;}).join("")}</td>`;
 }
 let cols_=[];
 function renderGrid(list,today){
@@ -1082,7 +1087,7 @@ function renderCalendar(){
         <div class="cmeta">${areaPills(a)}${linksOf(a).length?`<span>${linksOf(a).length} link${linksOf(a).length>1?"s":""}</span>`:""}${a.location?`<span>${esc(a.location)}</span>`:""}${a.planning?`<span>Planning: ${esc(a.planning)}</span>`:""}</div>
         <div class="ctags"><span class="tag">${esc(groupLabel(a.group))}</span>${orderedAreas(a).map(x=>`<span class="tag"><span class="dot ${x}" style="width:8px;height:8px;border-radius:50%;display:inline-block"></span>${areaName(x)}</span>`).join("")}</div>
       </div>
-      <div class="cside"><span class="status st-${esc(a.status||"planned")}">${esc(statusName(a.status||"planned"))}</span>${checks.length?`<span class="prog${doneN<checks.length&&a.status!=="done"&&a.status!=="cancelled"?" todo":""}">${doneN}/${checks.length} ready</span>`:""}</div>
+      <div class="cside"><span class="status st-${esc(statusOf(a))}">${esc(statusName(statusOf(a)||"planned"))}</span>${checks.length?`<span class="prog${doneN<checks.length&&a.status!=="done"&&a.status!=="cancelled"?" todo":""}">${doneN}/${checks.length} ready</span>`:""}</div>
     </button>`;
   }
   return h+`</div></section>`;
@@ -1236,7 +1241,7 @@ function readEditor(){
   if(e.kind==="idea"){
     Object.assign(e.a,{title:$("#fTitle").value.trim(),notes:$("#fNotes").value.trim()});
   }else{
-    Object.assign(e.a,{title:$("#fTitle").value.trim(),date:$("#fDate").value,group:$("#fGrp").value,status:$("#fStatus").value,
+    Object.assign(e.a,{title:$("#fTitle").value.trim(),date:$("#fDate").value,group:$("#fGrp").value,status:($("#fDate").value&&$("#fDate").value<todayIso()&&$("#fStatus").value!=="cancelled")?"done":$("#fStatus").value,
       location:$("#fLoc").value.trim(),budget:$("#fBudget").value.trim(),planning:$("#fPlan").value.trim(),notes:$("#fNotes").value.trim()});
     e.a.checks=e.checks;
   }
