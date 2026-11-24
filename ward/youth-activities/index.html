@@ -488,7 +488,7 @@ const OLD_YW={"Young Women 11–12":"Builders of Faith","Young Women 13–14":"M
 const YW_RE=/young women|class|builders? of faith|messengers? of hope|gatherers? of light/i;
 /** Quorums ("q") or Young Women ("yw") side of a group; null for combined youth. */
 const sideOf=g=>/quorum|young men/i.test(g||"")?"q":YW_RE.test(g||"")?"yw":null;
-const DEFAULT_CHECKS=["Two adults confirmed","Bishopric informed","Permission forms","Transport","Food","Equipment","Budget approved"];
+const DEFAULT_CHECKS=[];       // activities start with an empty checklist; add items per activity
 // Starter ideas for the ideas bank (added only when someone asks for them).
 const STARTER_IDEAS=[
   ["Temple baptisms trip",["spiritual"]],["Come, Follow Me games night",["spiritual","social"]],["Family history indexing night",["spiritual","intellectual"]],
