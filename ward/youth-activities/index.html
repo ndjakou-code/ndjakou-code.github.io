@@ -175,6 +175,7 @@ td.emp.over{outline:2px dashed var(--accent)!important;outline-offset:-4px;backg
 .signups{list-style:none;margin:0 0 10px;padding:0}.signups ul{list-style:none;margin:6px 0 0;padding:0}
 .signups li{display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line)}.signups li>span{flex:1}
 .signups summary{cursor:pointer;font-weight:600;font-size:.875rem;margin-bottom:4px}
+.sfilt{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}.sfilt .lay button{padding:4px 8px;font-size:.75rem}.sfilt .vbtn{font-size:.75rem}
 .csec{margin:0 0 8px}.csec>summary{cursor:pointer;font-weight:600;padding:6px 0}.csec .ideagrid{margin-top:6px}
 .vpts{color:var(--accent);font-weight:700}
 body.youth #newBtn{display:none}
@@ -303,6 +304,8 @@ body.youth #newBtn{display:none}
 .pills{display:inline-flex;flex-wrap:wrap;gap:5px 6px;vertical-align:middle;margin:3px 6px 3px 0}
 .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:0.6875rem;font-weight:400;line-height:1.5;color:var(--ink-2);background:transparent;border:1.5px solid var(--line-2);white-space:nowrap}
 .pill.fsy{border-color:var(--ink-2);color:var(--ink);font-weight:700;letter-spacing:.03em}
+.chk{display:flex;align-items:center;gap:6px;font-size:.875rem;margin-top:6px}
+.pill.where{border-style:dashed;color:var(--ink-2)}.pill.summer{border-color:#e0a800;color:var(--ink)}
 .pill.spiritual{border-color:var(--a-spiritual)}.pill.social{border-color:var(--a-social)}.pill.physical{border-color:var(--a-physical)}.pill.intellectual{border-color:var(--a-intellectual)}
 .evm .pills{margin-left:6px}
 .life.l-unplanned{color:var(--ink-2)}.life.l-planned{color:var(--accent)}.life.l-done{color:var(--muted)}.life.l-cancelled{color:var(--bad)}
@@ -528,6 +531,10 @@ const STARTER_IDEAS=[
 // Activity ideas published in For the Strength of Youth (FSY lessons, "Activity idea").
 // Short descriptions are our own; the link goes to the full article. Add new months here.
 const FSY_BASE="https://www.churchofjesuschrist.org/study/ftsoy/";
+// Where built-in ideas happen; anything not listed is inside. Outside and either are summer friendly.
+const IDEA_OUTSIDE=["Outdoor camping","Nature walk","Preserving the outdoors","Outdoor survival skills","Outdoor cooking","Fun 5K","Backpacking","Fishing","Hike to the devotional","One-match fire challenge","Bottle rockets","Service scavenger hunt","Welcome to the neighborhood","Flashlight treasure hunt"];
+const IDEA_EITHER=["Improving our community","Learn skills, then serve","Noncompetitive physical activities","Sports tournament","Teaching each other a sport","Sports night done right","Home painting","Beautifying our homes","Random acts of kindness challenge","Secret notes of encouragement","Thank-you notes","Easter celebration ideas","Exercise night","Photo contest","Humanitarian service","Food drive","An evening of service","Service is sweet"];
+const tagWhere=i=>{const w=IDEA_OUTSIDE.includes(i.title)?"outside":IDEA_EITHER.includes(i.title)?"either":"inside";return {...i,where:w,summer:w!=="inside"};};
 const CHURCH_BASE="https://www.churchofjesuschrist.org/study/manual/youth-activities/";
 // Youth Activities manual ideas: [section, title, areas, notes, page]
 const CHURCH_IDEAS=[
@@ -674,7 +681,7 @@ const CHURCH_IDEAS=[
   ["Arts, Music, and Dance","Photo contest",["intellectual","social"],"After learning photography basics, youth shoot photos on assigned themes and share the best.","cultural-arts?lang=eng#title41"],
   ["Arts, Music, and Dance","Talent show",["social"],"Youth plan and run a ward or youth talent show featuring individual and group acts.","cultural-arts?lang=eng#title44"],
   ["Arts, Music, and Dance","Youth choir",["spiritual","social"],"Youth form a choir, rehearse hymns and perform in a Church meeting or devotional.","cultural-arts?lang=eng#title47"]
-].map(([section,title,areas,notes,p])=>({section,title,areas,notes,url:CHURCH_BASE+p}));
+].map(([section,title,areas,notes,p])=>tagWhere({section,title,areas,notes,url:CHURCH_BASE+p}));
 const FSY_IDEAS=[
   {issue:"January 2027",title:"Life skills challenge",areas:["physical","intellectual","spiritual"],notes:"Minute-to-win-it stations run by ward members: sew a button, fold laundry, use tools, jump-start a car, find scriptures, reserve a temple name.",url:FSY_BASE+"2027/01/fsy-lessons/05a-activity-idea?lang=eng"},
   {issue:"January 2027",title:"Jesus Christ, the centre of the plan",areas:["spiritual","social"],notes:"Hide puzzle pieces with clues around the building, with Christ as the centre piece, then talk about the plan of salvation and patriarchal blessings.",url:FSY_BASE+"2027/01/fsy-lessons/05b-activity-idea?lang=eng"},
@@ -691,11 +698,11 @@ const FSY_IDEAS=[
   {issue:"January 2025",title:"The impossible paper",areas:["spiritual","intellectual"],notes:"Cut one sheet of paper so a person can step through it, then talk about trusting God when things seem impossible.",url:FSY_BASE+"2025/01/20-the-impossible-paper?lang=eng"},
   {issue:"October 2024",title:"Bottle rockets",areas:["social","intellectual","physical"],notes:"Build and launch air-powered bottle rockets, and invite a friend who doesn't usually come to help teach everyone.",url:FSY_BASE+"2024/10/09-belonging-blastoff?lang=eng"},
   {issue:"January 2024",title:"Gospel picture collage frames",areas:["social","spiritual"],notes:"Make collage frames from pictures cut out of Church magazines; the article also has youth tips for planning activities together.",url:FSY_BASE+"2024/01/questions-and-answers/17-youth-activity-ideas?lang=eng"}
-];
+].map(tagWhere);
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const state={youth:false,votes:{},tally:null,voted:0,myTop:[],myMore:[],youthPinSet:false,me:null,sugAreas:new Set(),breakQ:(()=>{try{return localStorage.getItem("youth-activities-breakq")||"quorum";}catch(e){return "quorum";}})(),breakYW:(()=>{try{return localStorage.getItem("youth-activities-breakyw")||"ward";}catch(e){return "ward";}})(),people:[],nights:{},peopleEdit:false,sideAreas:new Set(),hide:(()=>{try{return new Set(JSON.parse(localStorage.getItem("youth-activities-hide")||"[]"));}catch(e){return new Set();}})(),activities:new Map(),ideas:new Map(),meta:{},ready:false,view:"calendar",group:"",when:"all",areas:new Set(),period:"term",bank:"all",editing:null,layout:(()=>{try{return localStorage.getItem("youth-activities-layout")||"grid";}catch(e){return "grid";}})()};
+const state={whereF:"",summerF:false,youth:false,votes:{},tally:null,voted:0,myTop:[],myMore:[],youthPinSet:false,me:null,sugAreas:new Set(),breakQ:(()=>{try{return localStorage.getItem("youth-activities-breakq")||"quorum";}catch(e){return "quorum";}})(),breakYW:(()=>{try{return localStorage.getItem("youth-activities-breakyw")||"ward";}catch(e){return "ward";}})(),people:[],nights:{},peopleEdit:false,sideAreas:new Set(),hide:(()=>{try{return new Set(JSON.parse(localStorage.getItem("youth-activities-hide")||"[]"));}catch(e){return new Set();}})(),activities:new Map(),ideas:new Map(),meta:{},ready:false,view:"calendar",group:"",when:"all",areas:new Set(),period:"term",bank:"all",editing:null,layout:(()=>{try{return localStorage.getItem("youth-activities-layout")||"grid";}catch(e){return "grid";}})()};
 let ward=null,pin=null,owner=null,rev=0,pending=[],flushing=false,flushTimer=0,loading=false;
 const PIN_KEY="youth-activities-pin",WARD_KEY="youth-activities-ward";
 
@@ -756,7 +763,7 @@ function apiFailed(err){
   loadAll().catch(()=>{});
 }
 /** Ideas used to be a separate list; each becomes an activity with no date. */
-const unplanned=(title,areas,notes,links)=>({title,date:"",group:groups()[0],areas:areas||[],status:"idea",location:"",planning:"",adults:"",budget:"",notes:notes||"",links:links||[],checks:[],created:Date.now(),updated:Date.now()});
+const unplanned=(title,areas,notes,links,where,summer)=>({where:where||"",summer:!!summer,title,date:"",group:groups()[0],areas:areas||[],status:"idea",location:"",planning:"",adults:"",budget:"",notes:notes||"",links:links||[],checks:[],created:Date.now(),updated:Date.now()});
 function addYoungWomenClasses(){
   const g=state.meta.groups;
   if(g&&g.length&&g.includes("Young Women")&&!g.some(x=>YW_CLASSES.includes(x))){
@@ -940,14 +947,15 @@ function renderGrid(list,today){
 function withIdeas(main){
   if(state.readOnly)return main;
   const want=state.sideAreas.size?state.sideAreas:state.areas,hit=ar=>!want.size||(ar||[]).some(x=>want.has(x));
-  const mine=[...state.activities.entries()].filter(([,a])=>!a.date&&hit(a.areas))
+  const mine=[...state.activities.entries()].filter(([,a])=>!a.date&&hit(a.areas)&&passF(a))
     .sort((x,y)=>String(x[1].title).localeCompare(y[1].title));
   const have=new Set([...state.activities.values()].flatMap(a=>linksOf(a)));
-  const fsy=FSY_IDEAS.map((i,n)=>[i,n]).filter(([i])=>!have.has(i.url)&&hit(i.areas));
-  const church=CHURCH_IDEAS.map((i,n)=>[i,n]).filter(([i])=>!have.has(i.url)&&hit(i.areas));
+  const fsy=FSY_IDEAS.map((i,n)=>[i,n]).filter(([i])=>!have.has(i.url)&&hit(i.areas)&&passF(i));
+  const church=CHURCH_IDEAS.map((i,n)=>[i,n]).filter(([i])=>!have.has(i.url)&&hit(i.areas)&&passF(i));
   const item=(drag,i,meta,editId)=>`<div class="sdrag" draggable="true" data-drag="${esc(drag)}">${ideaBlock(i,meta,"",editId)}</div>`;
   return `<div class="calwrap"><div class="calmain">${main}</div><aside class="ideaside panel" aria-label="Ideas">
     <h2>Ideas</h2><p class="hint">Drag an idea onto a future night.</p>
+    <div class="sfilt">${whereFilters()}</div>
     <div class="sareas">${AREAS.map(([a,l])=>`<button class="abtn a-${a}" type="button" data-act="side-area" data-area="${a}" aria-pressed="${state.sideAreas.has(a)}">${l}</button>`).join("")}</div>
     ${mine.length?mine.map(([id,a])=>item("a:"+id,a,areaPills(a)||"No area yet",id)).join(""):`<p class="hint">No unplanned ideas.</p>`}
     ${fsy.length?`<h2>For the Strength of Youth</h2>${fsy.map(([i,n])=>item("f:"+n,i,(areaPills(i)||"")+" "+esc(i.issue))).join("")}`:""}
@@ -961,7 +969,7 @@ function dropIdea(drag,date,group){
     put("activities",v,{...a,date,group,status:"planned",checks:(a.checks&&a.checks.length)?a.checks:checks,updated:Date.now()});
     toast(`Planned “${a.title}” for ${dateObj(date).toLocaleDateString()}.`);}
   else if(k==="f"||k==="c"){const i=(k==="f"?FSY_IDEAS:CHURCH_IDEAS)[+v];if(!i)return;
-    put("activities",newId(),{...unplanned(i.title,i.areas,i.notes,[i.url]),date,group,status:"planned",checks});
+    put("activities",newId(),{...unplanned(i.title,i.areas,i.notes,[i.url],i.where,i.summer),date,group,status:"planned",checks});
     toast(`Planned “${i.title}” for ${dateObj(date).toLocaleDateString()}.`);}
 }
 let dragVal="";
@@ -1316,7 +1324,8 @@ function ideaBlock(i,meta,actions,editId){
 const areaList=i=>orderedAreas(i).map(areaName).join(" · ")||"No area yet";
 const isChurch=i=>[i.url,...(Array.isArray(i.links)?i.links:[])].some(l=>String(l||"").startsWith(CHURCH_BASE));
 const isFsy=i=>[i.url,...(Array.isArray(i.links)?i.links:[])].some(l=>String(l||"").startsWith(FSY_BASE));
-const areaPills=i=>{const ars=orderedAreas(i),fsy=isFsy(i);return ars.length||fsy||isChurch(i)?`<span class="pills">${fsy?`<span class="pill fsy">FSY</span>`:""}${isChurch(i)?`<span class="pill fsy">Church</span>`:""}${ars.map(x=>`<span class="pill ${esc(x)}">${esc(areaName(x))}</span>`).join("")}</span>`:"";};
+const WHERE_NAMES={inside:"Inside",outside:"Outside",either:"In or out"};
+const areaPills=i=>{const ars=orderedAreas(i),fsy=isFsy(i);return ars.length||fsy||isChurch(i)||i.where||i.summer?`<span class="pills">${fsy?`<span class="pill fsy">FSY</span>`:""}${isChurch(i)?`<span class="pill fsy">Church</span>`:""}${i.where&&WHERE_NAMES[i.where]?`<span class="pill where">${WHERE_NAMES[i.where]}</span>`:""}${i.summer?`<span class="pill summer">☀ Summer</span>`:""}${ars.map(x=>`<span class="pill ${esc(x)}">${esc(areaName(x))}</span>`).join("")}</span>`:"";};
 const fmtShort=iso=>{const d=dateObj(iso);return d.toLocaleDateString(undefined,{day:"numeric",month:"short",...(d.getFullYear()!==new Date().getFullYear()?{year:"numeric"}:{})});};
 /** Where an activity is in its life: unplanned (no date), planned, done or cancelled. */
 function lifeOf(a){
@@ -1330,16 +1339,22 @@ const linkMeta=a=>{const L=linksOf(a);return L.length===1?` · <a href="${esc(L[
 const unplannedCopies=url=>[...state.activities.entries()].filter(([,a])=>!a.date&&linksOf(a).includes(url)).map(([id])=>id);
 function churchSection(){
   const have=new Set([...state.activities.values()].flatMap(a=>linksOf(a)));
-  const list=CHURCH_IDEAS.map((i,n)=>[i,n]).filter(([i])=>!state.areas.size||i.areas.some(x=>state.areas.has(x)));
+  const list=CHURCH_IDEAS.map((i,n)=>[i,n]).filter(([i])=>(!state.areas.size||i.areas.some(x=>state.areas.has(x)))&&passF(i));
   if(!list.length)return "";
   const secs=[...new Set(list.map(([i])=>i.section))];
   return `<section><h2 class="ihead">From the Church's Youth Activities manual</h2>
     ${secs.map(sec=>{const L=list.filter(([i])=>i.section===sec);return `<details class="csec"><summary>${esc(sec)} <span class="muted">(${L.length})</span></summary><div class="ideagrid">${L.map(([i,n])=>ideaBlock(i,(areaPills(i)||"")+` · <a href="${esc(i.url)}" target="_blank" rel="noopener">Manual</a>`,
       `<button class="mini" type="button" data-act="plan-church" data-i="${n}">Plan</button>${unplannedCopies(i.url).length?`<button class="mini" type="button" data-act="remove-church" data-i="${n}">Remove</button>`:have.has(i.url)?`<span class="inbank">Planned</span>`:`<button class="mini" type="button" data-act="add-church" data-i="${n}">Add</button>`}`)).join("")}</div></details>`;}).join("")}</section>`;
 }
+/** Inside/outside and summer filters, shared by the Ideas tab and the drag panel. */
+const passF=i=>(!state.whereF||i.where===state.whereF||i.where==="either")&&(!state.summerF||!!i.summer);
+function whereFilters(){
+  return `<div class="lay" style="margin-left:0" role="group" aria-label="Inside or outside">${[["","Anywhere"],["inside","Inside"],["outside","Outside"]].map(([k,l])=>`<button type="button" data-act="where-f" data-k="${k}" aria-pressed="${state.whereF===k}">${l}</button>`).join("")}</div>
+    <button class="vbtn${state.summerF?" on":""}" type="button" data-act="summer-f" aria-pressed="${state.summerF}">☀ Summer friendly</button>`;
+}
 function fsySection(){
   const have=new Set([...state.activities.values()].flatMap(a=>linksOf(a)));
-  const list=FSY_IDEAS.map((i,n)=>[i,n]).filter(([i])=>!state.areas.size||i.areas.some(x=>state.areas.has(x)));
+  const list=FSY_IDEAS.map((i,n)=>[i,n]).filter(([i])=>(!state.areas.size||i.areas.some(x=>state.areas.has(x)))&&passF(i));
   if(!list.length)return "";
   return `<section><h2 class="ihead">From For the Strength of Youth</h2>
     <div class="ideagrid">${list.map(([i,n])=>ideaBlock(i,(areaPills(i)||"No area yet · ")+esc(i.issue)+` · <a href="${esc(i.url)}" target="_blank" rel="noopener">Article</a>`,
@@ -1349,12 +1364,12 @@ const BANK_FILTERS=[["all","All"],["unplanned","Unplanned"],["planned","Planned"
 function renderIdeas(){
   const all=[...state.activities.entries()];
   const order={unplanned:0,planned:1,done:2,cancelled:3};
-  const list=all.filter(([,a])=>(!state.areas.size||(a.areas||[]).some(x=>state.areas.has(x)))&&(state.bank==="all"||lifeOf(a)[0]===state.bank))
+  const list=all.filter(([,a])=>(!state.areas.size||(a.areas||[]).some(x=>state.areas.has(x)))&&passF(a)&&(state.bank==="all"||lifeOf(a)[0]===state.bank))
     .sort((x,y)=>{const lx=lifeOf(x[1])[0],ly=lifeOf(y[1])[0];if(lx!==ly)return order[lx]-order[ly];
       if(lx==="unplanned")return String(x[1].title).localeCompare(y[1].title);return lx==="planned"?x[1].date.localeCompare(y[1].date):y[1].date.localeCompare(x[1].date);});
   const count=k=>all.filter(([,a])=>lifeOf(a)[0]===k).length;
   let h=`<form class="panel addbar" id="ideaForm"><input id="ideaTitle" maxlength="120" placeholder="Add an idea (no date yet)" autocomplete="off" aria-label="New idea"><div class="areas" id="ideaAreas">${areaChips(state.newIdeaAreas||new Set(),"idea-area")}</div><button class="btn primary" type="submit">Add</button></form>
-    <div class="filters"><div class="lay" style="margin-left:0" role="group" aria-label="Show">${BANK_FILTERS.map(([k,l])=>`<button type="button" data-act="bank" data-k="${k}" aria-pressed="${state.bank===k}">${l} (${k==="all"?all.length:count(k)})</button>`).join("")}</div></div>`;
+    <div class="filters"><div class="lay" style="margin-left:0" role="group" aria-label="Show">${BANK_FILTERS.map(([k,l])=>`<button type="button" data-act="bank" data-k="${k}" aria-pressed="${state.bank===k}">${l} (${k==="all"?all.length:count(k)})</button>`).join("")}</div>${whereFilters()}</div>`;
   if(!all.length)return h+`<div class="panel empty"><h2>No ideas yet</h2><p>Start with ${STARTER_IDEAS.length} suggestions across the four areas, then add your own.</p><button class="btn primary" type="button" data-act="starter">Add starter ideas</button></div>`+fsySection()+churchSection();
   if(!list.length)return h+`<div class="panel empty"><p>Nothing matches these filters.</p></div>`+fsySection()+churchSection();
   return h+`<section><div class="ideagrid">${list.map(([id,a])=>{const[k,label]=lifeOf(a);
@@ -1410,7 +1425,9 @@ function drawEditor(){
     <div class="field wide"><span class="lbl">Areas it covers</span><div class="areas">${areaChips(e.areas,"edit-area")}</div></div>
     <div class="field wide"><label for="fNotes">Notes</label><textarea id="fNotes" maxlength="1500">${esc(a.notes||"")}</textarea></div>
     ${linksField(e)}
-    <div class="field"><label for="fLoc">Where</label><input id="fLoc" maxlength="120" value="${esc(a.location||"")}"></div>
+    <div class="field"><label for="fLoc">Place</label><input id="fLoc" maxlength="120" value="${esc(a.location||"")}"></div>
+    <div class="field"><label for="fWhere">Inside or outside</label><select id="fWhere"><option value="">Not set</option>${Object.entries(WHERE_NAMES).map(([k,l])=>`<option value="${k}"${a.where===k?" selected":""}>${l}</option>`).join("")}</select>
+      <label class="chk"><input type="checkbox" id="fSummer"${a.summer?" checked":""}> ☀ Summer friendly</label></div>
     <div class="field"><label for="fBudget">Budget (£)</label><input id="fBudget" inputmode="decimal" maxlength="12" value="${esc(a.budget||"")}"></div>
     <div class="field wide"><label for="fPlanQ">Planning it</label><input type="hidden" id="fPlan" value="${esc(a.planning||"")}">
       <div class="planpick" id="planPick"><span id="planChips">${planChips(a)}</span><input id="fPlanQ" autocomplete="off" placeholder="Type a name or initials" aria-autocomplete="list" aria-controls="planList"></div>
@@ -1435,7 +1452,7 @@ function readEditor(){
     Object.assign(e.a,{title:$("#fTitle").value.trim(),notes:$("#fNotes").value.trim()});
   }else{
     Object.assign(e.a,{title:$("#fTitle").value.trim(),date:$("#fDate").value,group:$("#fGrp").value,status:($("#fDate").value&&$("#fDate").value<todayIso()&&$("#fStatus").value!=="cancelled")?"done":$("#fStatus").value,
-      location:$("#fLoc").value.trim(),budget:$("#fBudget").value.trim(),planning:$("#fPlan").value.trim(),notes:$("#fNotes").value.trim()});
+      location:$("#fLoc").value.trim(),where:$("#fWhere").value,summer:$("#fSummer").checked,budget:$("#fBudget").value.trim(),planning:$("#fPlan").value.trim(),notes:$("#fNotes").value.trim()});
     e.a.checks=e.checks;
   }
   e.a.areas=[...e.areas];e.a.links=e.links.slice();
@@ -1492,6 +1509,8 @@ document.addEventListener("click",e=>{
     case"new-at":openEditor(null,{date:b.dataset.date,group:b.dataset.group});return;
     case"new":openEditor(null);return;
     case"edit":openEditor(b.dataset.id);if(b.dataset.focus==="date")setTimeout(()=>{const d=$("#fDate");if(d)d.focus();},60);return;
+    case"where-f":state.whereF=b.dataset.k;render();return;
+    case"summer-f":state.summerF=!state.summerF;render();return;
     case"bank":state.bank=b.dataset.k;render();return;
     case"plan-again":{const x=state.activities.get(b.dataset.id);if(!x)return;if(!$("#editModal").hidden)closeEditor();
       openEditor(null,{title:x.title,group:x.group,areas:[...(x.areas||[])],notes:x.notes||"",links:linksOf(x),location:x.location||"",budget:x.budget||"",status:"planned"});
@@ -1515,12 +1534,12 @@ document.addEventListener("click",e=>{
       put("activities",state.editing.id,null);closeEditor();toast("Activity deleted.");return;}
     case"save-idea":{readEditor();const a=state.editing.a;put("ideas",newId(),{title:a.title,areas:a.areas,notes:a.notes||"",links:a.links||[],created:Date.now()});toast("Saved to the ideas bank.");return;}
     case"plan-idea":{const i=state.ideas.get(b.dataset.id);if(i)openEditor(null,{title:i.title,areas:[...(i.areas||[])],notes:i.notes||"",links:linksOf(i),status:"idea"});return;}
-    case"plan-church":{const i=CHURCH_IDEAS[+b.dataset.i];if(i)openEditor(null,{title:i.title,areas:[...i.areas],notes:i.notes,links:[i.url],status:"idea"});return;}
+    case"plan-church":{const i=CHURCH_IDEAS[+b.dataset.i];if(i)openEditor(null,{title:i.title,areas:[...i.areas],notes:i.notes,links:[i.url],status:"idea",where:i.where,summer:i.summer});return;}
     case"remove-church":{const i=CHURCH_IDEAS[+b.dataset.i];if(i){unplannedCopies(i.url).forEach(id=>put("activities",id,null));toast("Removed from your ideas bank.");}return;}
-    case"add-church":{const i=CHURCH_IDEAS[+b.dataset.i];if(i){put("activities",newId(),unplanned(i.title,i.areas,i.notes,[i.url]));toast("Added to your ideas bank.");}return;}
-    case"plan-fsy":{const i=FSY_IDEAS[+b.dataset.i];if(i)openEditor(null,{title:i.title,areas:[...i.areas],notes:i.notes,links:[i.url],status:"idea"});return;}
+    case"add-church":{const i=CHURCH_IDEAS[+b.dataset.i];if(i){put("activities",newId(),unplanned(i.title,i.areas,i.notes,[i.url],i.where,i.summer));toast("Added to your ideas bank.");}return;}
+    case"plan-fsy":{const i=FSY_IDEAS[+b.dataset.i];if(i)openEditor(null,{title:i.title,areas:[...i.areas],notes:i.notes,links:[i.url],status:"idea",where:i.where,summer:i.summer});return;}
     case"remove-fsy":{const i=FSY_IDEAS[+b.dataset.i];if(i){unplannedCopies(i.url).forEach(id=>put("activities",id,null));toast("Removed from your ideas bank.");}return;}
-    case"add-fsy":{const i=FSY_IDEAS[+b.dataset.i];if(i){put("activities",newId(),unplanned(i.title,i.areas,i.notes,[i.url]));toast("Added to your ideas bank.");}return;}
+    case"add-fsy":{const i=FSY_IDEAS[+b.dataset.i];if(i){put("activities",newId(),unplanned(i.title,i.areas,i.notes,[i.url],i.where,i.summer));toast("Added to your ideas bank.");}return;}
     case"del-idea":{
       if(!b.classList.contains("armed")){b.classList.add("armed");b.textContent="Confirm";setTimeout(()=>{if(b.isConnected){b.classList.remove("armed");b.textContent="Remove";}},3500);return;}
       put("ideas",b.dataset.id,null);return;}
