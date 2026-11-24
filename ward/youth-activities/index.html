@@ -175,6 +175,7 @@ td.emp.over{outline:2px dashed var(--accent)!important;outline-offset:-4px;backg
 .signups{list-style:none;margin:0 0 10px;padding:0}.signups ul{list-style:none;margin:6px 0 0;padding:0}
 .signups li{display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line)}.signups li>span{flex:1}
 .signups summary{cursor:pointer;font-weight:600;font-size:.875rem;margin-bottom:4px}
+.csec{margin:0 0 8px}.csec>summary{cursor:pointer;font-weight:600;padding:6px 0}.csec .ideagrid{margin-top:6px}
 .vpts{color:var(--accent);font-weight:700}
 body.youth #newBtn{display:none}
 .whois{font-size:0.7813rem;color:var(--muted);margin-top:3px}
@@ -330,7 +331,7 @@ body.youth #newBtn{display:none}
 .abtn.a-physical[aria-pressed="true"]{background:color-mix(in srgb,var(--a-physical) 16%,var(--surface))}
 .abtn.a-intellectual[aria-pressed="true"]{background:color-mix(in srgb,var(--a-intellectual) 18%,var(--surface))}
 @media (max-width:640px){.arealegend{width:100%;order:4}.abtn{flex:1;padding:6px 6px 6px 12px;font-size:0.7813rem}}
-body.ro .emp button,body.ro #ideaForm,body.ro [data-act="starter"],body.ro [data-act="plan-again"],body.ro [data-focus="date"],body.ro [data-act="add-fsy"],body.ro [data-act="plan-fsy"],body.ro [data-act="new"]{display:none!important}
+body.ro .emp button,body.ro #ideaForm,body.ro [data-act="starter"],body.ro [data-act="plan-again"],body.ro [data-focus="date"],body.ro [data-act="add-fsy"],body.ro [data-act="plan-fsy"],body.ro [data-act="add-church"],body.ro [data-act="plan-church"],body.ro [data-act="remove-church"],body.ro [data-act="remove-fsy"],body.ro [data-act="new"]{display:none!important}
 .hist{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow:auto}
 .hist li{border:1px solid var(--line);border-radius:0 8px 8px 0;border-left:4px solid var(--line-2);padding:7px 10px;font-size:0.8125rem}
 .hwhen{font-size:0.75rem;color:var(--muted);margin-bottom:2px}
@@ -527,6 +528,153 @@ const STARTER_IDEAS=[
 // Activity ideas published in For the Strength of Youth (FSY lessons, "Activity idea").
 // Short descriptions are our own; the link goes to the full article. Add new months here.
 const FSY_BASE="https://www.churchofjesuschrist.org/study/ftsoy/";
+const CHURCH_BASE="https://www.churchofjesuschrist.org/study/manual/youth-activities/";
+// Youth Activities manual ideas: [section, title, areas, notes, page]
+const CHURCH_IDEAS=[
+  ["Service","Beautifying our homes",["social","physical"],"Youth pick a spot at home to improve and mentors teach painting, decorating or simple repair skills to do it.","service?lang=eng#title2"],
+  ["Service","Christmas giving",["social","spiritual"],"With the bishop's guidance, youth gather gifts and food for a family in need, often anonymously, then talk about the experience.","service?lang=eng#title5"],
+  ["Service","Food drive",["social"],"Youth organize a collection of nonperishable food and deliver it to a food bank or charity serving the hungry.","service?lang=eng#title8"],
+  ["Service","Fun for friends with disabilities",["social","spiritual"],"After a short video, youth host an evening of games and activities with youth and adults who have disabilities.","service?lang=eng#title11"],
+  ["Service","Humanitarian service",["social","spiritual"],"Youth tour a storehouse, shelter or relief agency, learn how it helps people, and volunteer there.","service?lang=eng#title14"],
+  ["Service","Improving our community",["social"],"Youth meet community leaders to find local needs, then plan and carry out a project to meet one.","service?lang=eng#title17"],
+  ["Service","Learn skills, then serve",["social","physical"],"Someone teaches a practical skill such as bike repair or gardening, and youth use it to help a person in need.","service?lang=eng#title20"],
+  ["Service","Panel discussion about family relationships",["social","spiritual"],"Adult siblings and relatives answer questions about how to show kindness and build friendships within the family.","service?lang=eng#title23"],
+  ["Service","Random acts of kindness challenge",["social"],"Small groups race to do as many kind deeds as possible in a set time, then report back.","service?lang=eng#title29"],
+  ["Service","Secret notes of encouragement",["social"],"Youth secretly leave uplifting messages on the doors, cars or yards of ward members who need a lift.","service?lang=eng#title32"],
+  ["Service","Service for Father's Day",["social","spiritual"],"After a short video, youth share what their fathers mean to them and plan ways to show gratitude.","service?lang=eng#title35"],
+  ["Service","Service for Mother's Day",["social","spiritual"],"After a short video, youth talk about their mothers and plan ways to serve and thank them.","service?lang=eng#title38"],
+  ["Service","Service is sweet",["social","physical"],"Groups complete service tasks to earn the ingredients for a treat, then make and eat it together.","service?lang=eng#title41"],
+  ["Service","Service scavenger hunt",["social","physical"],"Teams with an adult visit nearby homes and streets doing service jobs from a list worth different points.","service?lang=eng#title44"],
+  ["Service","Seven days of service",["social","spiritual"],"Youth brainstorm needs in families and the ward, then commit to serve someone every day for a week.","service?lang=eng#title47"],
+  ["Service","Skills we can use to serve",["social","intellectual"],"Youth list needs in the ward, identify the skills required, and learn those skills to help.","service?lang=eng#title50"],
+  ["Service","Visit and serve the elderly",["social"],"Youth visit elderly members or a care home, perhaps sharing music or a short program.","service?lang=eng#title53"],
+  ["Service","Welcome to the neighborhood",["social","physical"],"Youth help a family new to the area move in or do yard work, painting or repairs for them.","service?lang=eng#title56"],
+  ["Missionary Work","Bring the Book of Mormon to life",["spiritual","social"],"Youth practice in pairs how to read the Book of Mormon with a sibling or friend, then do it weekly.","missionary-work?lang=eng#title2"],
+  ["Missionary Work","Church tours",["spiritual","social"],"Youth help the missionaries host building tours for friends and less-active members.","missionary-work?lang=eng#title5"],
+  ["Missionary Work","I follow Jesus Christ",["spiritual"],"Small groups take common questions about the Church and practice answering by explaining how they follow Christ.","missionary-work?lang=eng#title8"],
+  ["Missionary Work","Improve my teaching skills",["spiritual","intellectual"],"Youth learn basic teaching skills such as asking questions and listening, then practice teaching one another.","missionary-work?lang=eng#title11"],
+  ["Missionary Work","Mini mission",["spiritual","social"],"Same-gender companionships get a mock mission call, study a lesson and practice teaching it like missionaries.","missionary-work?lang=eng#title14"],
+  ["Missionary Work","Mission memories and meals",["spiritual","social"],"At a returned missionary's home, youth cook a simple mission meal and hear mission stories.","missionary-work?lang=eng#title17"],
+  ["Missionary Work","Missionary exchanges",["spiritual","social"],"Older youth accompany the full-time missionaries for a while to help find and teach people.","missionary-work?lang=eng#title20"],
+  ["Missionary Work","Missionary movie night",["spiritual","social"],"Youth watch an episode of The District and discuss what it shows about missionary work.","missionary-work?lang=eng#title23"],
+  ["Missionary Work","Missionary open house",["spiritual","social"],"Youth help plan, advertise and host an open house or cultural event at the meetinghouse for the community.","missionary-work?lang=eng#title26"],
+  ["Missionary Work","Missionary tips from missionaries",["spiritual"],"Full-time or returned missionaries share how they study and teach, and youth role-play sharing the gospel.","missionary-work?lang=eng#title29"],
+  ["Missionary Work","Place a Book of Mormon",["spiritual"],"Youth write their testimonies in copies of the Book of Mormon, mark favorite verses and plan whom to give them to.","missionary-work?lang=eng#title32"],
+  ["Missionary Work","Role-play a missionary situation",["spiritual","intellectual"],"Companionships prepare short lessons and teach other youth who play investigators.","missionary-work?lang=eng#title35"],
+  ["Missionary Work","Share a Christ-centered message with others",["spiritual","social"],"Youth watch short videos about the Savior and share uplifting messages about him on social media.","missionary-work?lang=eng#title38"],
+  ["Missionary Work","Study as missionaries do",["spiritual","intellectual"],"Companionships study an assigned scripture chapter using the missionary study method and share what they learned.","missionary-work?lang=eng#title41"],
+  ["Missionary Work","Teaching people from other cultures",["spiritual","intellectual"],"Returned missionaries host tables on the cultures and faiths where they served and youth visit each.","missionary-work?lang=eng#title44"],
+  ["Missionary Work","The Book of Mormon and questions of the soul",["spiritual","intellectual"],"Each youth takes a big life question and searches the Book of Mormon for how it answers it.","missionary-work?lang=eng#title47"],
+  ["Future Roles","Career possibilities",["intellectual"],"Ward members in various jobs explain their work and how to enter their field; youth may take an interest survey.","future-roles?lang=eng#title2"],
+  ["Future Roles","Visiting a college or vocational school",["intellectual"],"Youth tour a local college or trade school and ask about admissions, costs and career paths.","future-roles?lang=eng#title5"],
+  ["Future Roles","A house of order",["physical","intellectual"],"A mentor teaches cleaning and organizing skills, with games or contests built around household tasks.","future-roles?lang=eng#title8"],
+  ["Future Roles","Cook-off",["social","physical"],"Youth and leaders cook favorite family recipes for a casual dinner with fun awards for different categories.","future-roles?lang=eng#title11"],
+  ["Future Roles","Family home evening practice",["spiritual","social"],"Youth choose a gospel topic and practice planning and teaching a home evening lesson.","future-roles?lang=eng#title14"],
+  ["Future Roles","Fatherhood panel discussion",["spiritual","social"],"A panel of parents talks about what makes a great father and answers youth questions.","future-roles?lang=eng#title17"],
+  ["Future Roles","Future parents",["intellectual","social"],"Youth learn child development, safety and care basics, including games and songs children enjoy.","future-roles?lang=eng#title20"],
+  ["Future Roles","Home maintenance",["physical","intellectual"],"Leaders or youth teach practical skills like ironing, sewing, basic plumbing and tool use, perhaps with a contest.","future-roles?lang=eng#title23"],
+  ["Future Roles","Home painting",["physical","social"],"A painter teaches the basics, then youth paint a room or fence for someone in need.","future-roles?lang=eng#title26"],
+  ["Future Roles","Honor thy parents",["social","spiritual"],"Youth gather stories, photos and objects about their parents and share them to honor them.","future-roles?lang=eng#title29"],
+  ["Future Roles","How to pay for schooling",["intellectual"],"A counselor explains scholarships, aid and other ways to pay for further education.","future-roles?lang=eng#title32"],
+  ["Future Roles","How to succeed in school",["intellectual","social"],"Youth are paired with tutors for hard subjects and discuss good study strategies.","future-roles?lang=eng#title35"],
+  ["Future Roles","Job searching",["intellectual"],"An employment specialist teaches youth how to look for work, write a resume and interview.","future-roles?lang=eng#title38"],
+  ["Future Roles","Learning to cook",["physical","intellectual"],"A good cook teaches meal planning, shopping and basic cooking; groups then make a meal together.","future-roles?lang=eng#title41"],
+  ["Future Roles","Library science",["intellectual"],"Youth tour a public library and learn how to use its resources for school and learning.","future-roles?lang=eng#title44"],
+  ["Future Roles","Money matters",["intellectual"],"Youth explore living costs and learn to budget, save, avoid debt and pay tithing.","future-roles?lang=eng#title47"],
+  ["Future Roles","Motherhood panel discussion",["spiritual","social"],"A panel of parents talks about what makes a great mother and answers youth questions.","future-roles?lang=eng#title50"],
+  ["Future Roles","Prepare for temple marriage",["spiritual","social"],"In a room decorated with temple pictures, youth and parents discuss eternal marriage and set personal goals.","future-roles?lang=eng#title53"],
+  ["Future Roles","Scripture study skills",["spiritual","intellectual"],"A teacher demonstrates marking, note-taking and topical study, and youth try each method.","future-roles?lang=eng#title56"],
+  ["Future Roles","Study skill stations",["intellectual"],"Youth rotate through stations practicing skills such as note-taking, test prep and time management.","future-roles?lang=eng#title59"],
+  ["Temple and Family History","Accept the temple challenge",["spiritual"],"Youth find ancestors who need temple ordinances and plan to take those names to the temple.","temple-and-family-history?lang=eng#title2"],
+  ["Temple and Family History","Create and use a Church Account",["intellectual","spiritual"],"At a computer lab, someone helps each youth set up a Church account and explore its family history tools.","temple-and-family-history?lang=eng#title5"],
+  ["Temple and Family History","Family traditions",["social","spiritual"],"Youth interview relatives about family traditions, or start one, and share the stories, food or music.","temple-and-family-history?lang=eng#title8"],
+  ["Temple and Family History","Find your ancestors",["spiritual","intellectual"],"At a family history center, youth research their ancestors and prepare names for temple work.","temple-and-family-history?lang=eng#title11"],
+  ["Temple and Family History","Help others prepare family names",["spiritual","social"],"Youth collect family booklets from ward members and help them enter names and prepare them for the temple.","temple-and-family-history?lang=eng#title14"],
+  ["Temple and Family History","Indexing",["spiritual","intellectual"],"A consultant teaches indexing and the group works toward a shared goal of names indexed.","temple-and-family-history?lang=eng#title17"],
+  ["Temple and Family History","Learn about an ancestor",["spiritual","intellectual"],"An expert shows how records reveal stories, then youth search records to learn about one ancestor.","temple-and-family-history?lang=eng#title20"],
+  ["Temple and Family History","My favorite family story",["spiritual","social"],"Youth each share a favorite family story and explain why it matters to them.","temple-and-family-history?lang=eng#title23"],
+  ["Temple and Family History","Preserve living memory",["spiritual","social"],"Youth pair with older members to scan photos and record their stories for family history.","temple-and-family-history?lang=eng#title26"],
+  ["Communication and Relationships","Building self-confidence",["social","spiritual"],"Youth choose a quality to strengthen and write a personal plan to grow in it.","communication-and-relationships?lang=eng#title2"],
+  ["Communication and Relationships","Friends of other faiths",["social"],"Youth host a meal, service project or game with local groups of other faiths to build friendship.","communication-and-relationships?lang=eng#title5"],
+  ["Communication and Relationships","Circle of trust",["social","physical"],"In a tight circle, youth take turns leaning back and being supported by the group, then discuss trust.","communication-and-relationships?lang=eng#title8"],
+  ["Communication and Relationships","Daddy-daughter/mother-son date",["social"],"Youth bring a parent or relative on a group date at the church to practice dating manners.","communication-and-relationships?lang=eng#title11"],
+  ["Communication and Relationships","Dating panel",["social","spiritual"],"Older youth ask a panel of couples and young adults questions about dating and relationships.","communication-and-relationships?lang=eng#title14"],
+  ["Communication and Relationships","Floating your solutions",["social","intellectual"],"Teams build a raft from straws and tape to float as many coins as possible, then discuss teamwork.","communication-and-relationships?lang=eng#title17"],
+  ["Communication and Relationships","Follower and guide",["social","physical"],"One partner leads a blindfolded partner through an obstacle course, then they switch and discuss.","communication-and-relationships?lang=eng#title20"],
+  ["Communication and Relationships","Get to know your bishop",["social","spiritual"],"The bishop shares about his life, calling and testimony and plays games with the youth.","communication-and-relationships?lang=eng#title23"],
+  ["Communication and Relationships","Getting to know each other",["social"],"Youth bring three items that describe them; the group guesses whose bag belongs to whom.","communication-and-relationships?lang=eng#title26"],
+  ["Communication and Relationships","Getting to know the adults",["social"],"Youth and ward adults sit across from each other and rotate through get-to-know-you questions.","communication-and-relationships?lang=eng#title29"],
+  ["Communication and Relationships","Greater than the sum of the parts",["social"],"Each youth brings one ingredient without knowing the recipe; together they make a treat and discuss unity.","communication-and-relationships?lang=eng#title32"],
+  ["Communication and Relationships","Group date ideas",["social"],"Older youth brainstorm creative, wholesome group date ideas and then try one together.","communication-and-relationships?lang=eng#title35"],
+  ["Communication and Relationships","Lines of communication",["social","intellectual"],"Blindfolded teams form shapes with a rope loop without speaking, then debrief on communication.","communication-and-relationships?lang=eng#title38"],
+  ["Communication and Relationships","Manners dinner",["social"],"Youth learn and practice etiquette and courtesy during a dinner together.","communication-and-relationships?lang=eng#title41"],
+  ["Communication and Relationships","No bullying",["social","spiritual"],"A guest speaker discusses bullying and youth role-play how to prevent and respond to it.","communication-and-relationships?lang=eng#title44"],
+  ["Communication and Relationships","Ready, aim, fire",["social","intellectual"],"Pairs toss balls into a bucket, set and adjust targets, and talk about goal-setting and teamwork.","communication-and-relationships?lang=eng#title47"],
+  ["Communication and Relationships","See-tell-create",["social","intellectual"],"Teams rebuild a hidden arrangement of objects by relaying spoken descriptions, practicing clear communication.","communication-and-relationships?lang=eng#title50"],
+  ["Communication and Relationships","Service auction",["social"],"Youth offer services to each other and bid for them, then carry out the services they won.","communication-and-relationships?lang=eng#title53"],
+  ["Communication and Relationships","Thank-you notes",["social","spiritual"],"Youth secretly leave notes of thanks or encouragement at ward members' doors and discuss gratitude.","communication-and-relationships?lang=eng#title56"],
+  ["Communication and Relationships","The art of conversation",["social"],"Youth sit in facing rows and rotate through conversation topics to practice friendship skills.","communication-and-relationships?lang=eng#title59"],
+  ["Communication and Relationships","Unbirthday party",["social"],"Each youth secretly plans a small celebration for another based on that person's favorites survey.","communication-and-relationships?lang=eng#title62"],
+  ["Communication and Relationships","Web of gratitude",["social","spiritual"],"Passing a ball of yarn around a circle, each youth thanks someone, building a web of appreciation.","communication-and-relationships?lang=eng#title65"],
+  ["Sports, Camping, and Outdoors","Outdoor camping",["physical","social"],"Youth plan and hold an overnight campout, leading the meals, activities and a spiritual moment.","sports-camping-and-outdoors?lang=eng#title2"],
+  ["Sports, Camping, and Outdoors","Nature walk",["spiritual","physical"],"Youth hike or walk outdoors and reflect on the beauty of God's creations.","sports-camping-and-outdoors?lang=eng#title5"],
+  ["Sports, Camping, and Outdoors","Teaching each other a sport",["physical","social"],"A youth teaches the group a new sport or skills, then everyone plays together.","sports-camping-and-outdoors?lang=eng#title8"],
+  ["Sports, Camping, and Outdoors","Noncompetitive physical activities",["physical","social"],"Youth enjoy casual, non-scored activities such as skating or swimming, suggested by the group.","sports-camping-and-outdoors?lang=eng#title11"],
+  ["Sports, Camping, and Outdoors","Preserving the outdoors",["physical","spiritual"],"Youth discuss stewardship of the earth and do a cleanup, tree planting or trail project.","sports-camping-and-outdoors?lang=eng#title14"],
+  ["Sports, Camping, and Outdoors","Outdoor survival skills",["physical","intellectual"],"Youth learn shelter building, fire making, finding water and navigating if lost.","sports-camping-and-outdoors?lang=eng#title17"],
+  ["Sports, Camping, and Outdoors","Sports tournament",["physical","social"],"Randomly mixed teams compete in basketball, soccer, table tennis or other sports.","sports-camping-and-outdoors?lang=eng#title20"],
+  ["Sports, Camping, and Outdoors","Game night",["physical","social"],"Youth play active team games, adapted so all skill levels can join in.","sports-camping-and-outdoors?lang=eng#title23"],
+  ["Sports, Camping, and Outdoors","Outdoor cooking",["physical","social"],"Youth learn fire safety and Dutch-oven or camp-stove cooking, then make a meal or treat.","sports-camping-and-outdoors?lang=eng#title26"],
+  ["Sports, Camping, and Outdoors","Fun 5K",["physical","social"],"Youth run or walk a 5K after a runner teaches warm-up, technique and fitness benefits.","sports-camping-and-outdoors?lang=eng#title29"],
+  ["Sports, Camping, and Outdoors","Backpacking",["physical","spiritual"],"Over several weeks youth prepare skills and gear, then go on a backpacking trip together.","sports-camping-and-outdoors?lang=eng#title32"],
+  ["Sports, Camping, and Outdoors","Fishing",["physical","spiritual"],"Over several weeks youth learn fishing skills and safety, then take a fishing trip.","sports-camping-and-outdoors?lang=eng#title35"],
+  ["Physical Health","A gospel view of emotional health",["spiritual","physical"],"Youth study the Lord's counsel on emotional health and hear from someone experienced in the field.","physical-health?lang=eng#title2"],
+  ["Physical Health","Emergency preparedness",["physical","intellectual"],"An expert teaches emergency readiness and youth assemble small emergency kits.","physical-health?lang=eng#title5"],
+  ["Physical Health","Evaluating our nutrition",["physical","intellectual"],"A nutrition expert teaches healthy eating; youth review their recent diets and plan improvements.","physical-health?lang=eng#title8"],
+  ["Physical Health","Exercise night",["physical"],"Youth try a range of exercises such as running, yoga or martial arts, possibly with an instructor.","physical-health?lang=eng#title11"],
+  ["Physical Health","First aid",["physical","intellectual"],"Someone teaches first aid such as wound care, CPR and choking response, and youth practice.","physical-health?lang=eng#title14"],
+  ["Physical Health","Healthy food hunt",["physical","intellectual"],"Teams shop at a store for the healthiest ingredients after learning to judge nutritional value.","physical-health?lang=eng#title17"],
+  ["Physical Health","Hike to the devotional",["physical","spiritual"],"Youth take a short hike that ends with a devotional on physical and spiritual fitness.","physical-health?lang=eng#title20"],
+  ["Physical Health","Internet safety",["intellectual","spiritual"],"A knowledgeable guest teaches how to avoid harmful content, cyberbullying, predators and identity theft.","physical-health?lang=eng#title23"],
+  ["Physical Health","Making our own cookbook",["physical","social"],"Youth contribute favorite healthy recipes, compile a cookbook and share samples.","physical-health?lang=eng#title26"],
+  ["Physical Health","Sports night done right",["physical","social"],"A youth teaches a sport, the group plays it, and they discuss good sportsmanship.","physical-health?lang=eng#title29"],
+  ["Physical Health","Traffic safety",["physical","intellectual"],"An expert covers safe driving, pedestrian and bike safety, and youth discuss distractions.","physical-health?lang=eng#title32"],
+  ["Spiritual Strength","Faith walk",["spiritual"],"Blindfolded youth follow a rope through an obstacle course toward a picture of the Savior, then discuss faith.","spiritual-strength?lang=eng#title2"],
+  ["Spiritual Strength","New Beginnings",["spiritual","social"],"An annual evening introducing young women and their parents to the Young Women program.","spiritual-strength?lang=eng#title5"],
+  ["Spiritual Strength","Bible customs",["spiritual","intellectual"],"Someone who studies the Bible explains ancient customs, and youth find scriptures they illuminate.","spiritual-strength?lang=eng#title8"],
+  ["Spiritual Strength","Stand for the right",["spiritual"],"Youth move between stations with real-life dilemmas and discuss how to keep the Lord's standards.","spiritual-strength?lang=eng#title11"],
+  ["Spiritual Strength","Advertising our standards",["spiritual","intellectual"],"Groups create posters, videos or songs promoting a youth standard and present them.","spiritual-strength?lang=eng#title17"],
+  ["Spiritual Strength","Attributes of Christ",["spiritual"],"Youth assess Christlike attributes and make a plan to develop one in their own lives.","spiritual-strength?lang=eng#title20"],
+  ["Spiritual Strength","Book of Mormon challenge",["spiritual"],"Youth commit to read the Book of Mormon in a set time and support each other's progress.","spiritual-strength?lang=eng#title23"],
+  ["Spiritual Strength","Bringing the Book of Mormon to life",["spiritual","social"],"Youth teach Book of Mormon stories to each other through skits, videos or games.","spiritual-strength?lang=eng#title26"],
+  ["Spiritual Strength","Find answers to your questions during general conference",["spiritual"],"Before conference youth write gospel questions, then note answers as they watch and share.","spiritual-strength?lang=eng#title29"],
+  ["Spiritual Strength","General conference quote jars",["spiritual","social"],"Youth fill jars with favorite conference quotes to draw and ponder daily until the next conference.","spiritual-strength?lang=eng#title32"],
+  ["Spiritual Strength","General conference recap",["spiritual","intellectual"],"Teams play a trivia game about the latest general conference talks and speakers.","spiritual-strength?lang=eng#title35"],
+  ["Spiritual Strength","Keep a journal your way",["spiritual","intellectual"],"Youth explore different journaling styles, from scrapbooks to video, and set goals to keep one.","spiritual-strength?lang=eng#title38"],
+  ["Spiritual Strength","Modesty fashion show",["spiritual","social"],"Youth learn to adapt clothing for modesty and model modest outfits for different occasions.","spiritual-strength?lang=eng#title41"],
+  ["Spiritual Strength","My favorite scripture",["spiritual","social"],"Youth bring an object representing a favorite scripture and explain why it matters to them.","spiritual-strength?lang=eng#title44"],
+  ["Spiritual Strength","Read the four Gospels",["spiritual"],"The class or quorum plans to read Matthew through John within a set time, such as by Easter.","spiritual-strength?lang=eng#title47"],
+  ["Spiritual Strength","Scripture games",["spiritual","intellectual"],"Youth play games that teach scripture stories and gospel principles.","spiritual-strength?lang=eng#title50"],
+  ["Spiritual Strength","Sharing what we learn",["spiritual","social"],"Youth visit less-active members, converts or the elderly to share a short message from Sunday lessons.","spiritual-strength?lang=eng#title53"],
+  ["Spiritual Strength","Standards games",["spiritual","social"],"Youth play games that practice explaining the Church's standards to others.","spiritual-strength?lang=eng#title56"],
+  ["Spiritual Strength","Standing up for the Lord's standards",["spiritual"],"Youth work together to answer common arguments against gospel standards using scriptures and counsel.","spiritual-strength?lang=eng#title59"],
+  ["Arts, Music, and Dance","Learn an artistic skill",["intellectual","social"],"A ward or community member teaches a craft such as knitting, painting or woodcarving.","cultural-arts?lang=eng#title2"],
+  ["Arts, Music, and Dance","The art of cooking",["social","intellectual"],"A skilled cook teaches an attractive dish that youth prepare and deliver to ward members.","cultural-arts?lang=eng#title5"],
+  ["Arts, Music, and Dance","Attend a concert",["social","intellectual"],"The group attends an uplifting concert or recital and talks about good music.","cultural-arts?lang=eng#title8"],
+  ["Arts, Music, and Dance","Attending a performance",["social","intellectual"],"Youth attend a play or recital, perhaps touring backstage, and discuss the arts.","cultural-arts?lang=eng#title11"],
+  ["Arts, Music, and Dance","Conducting music",["intellectual","spiritual"],"Youth learn to conduct hymns in common time signatures and practice for church meetings.","cultural-arts?lang=eng#title14"],
+  ["Arts, Music, and Dance","Dance etiquette",["social"],"Youth learn and practice how to ask someone to dance, dance manners and respect.","cultural-arts?lang=eng#title17"],
+  ["Arts, Music, and Dance","Dances",["social","physical"],"Instructors teach traditional, cultural and historical dances and youth discuss standards for dancing.","cultural-arts?lang=eng#title20"],
+  ["Arts, Music, and Dance","Drama",["social","intellectual"],"Groups write or adapt short plays or skits, rehearse, and perform them.","cultural-arts?lang=eng#title23"],
+  ["Arts, Music, and Dance","Film festival",["intellectual","social"],"Youth learn filmmaking basics, make short story videos over a few weeks, and screen them.","cultural-arts?lang=eng#title26"],
+  ["Arts, Music, and Dance","Improv night",["social"],"Groups get a bag of random props and invent skits using every item.","cultural-arts?lang=eng#title29"],
+  ["Arts, Music, and Dance","Music and dance from the past",["social","physical"],"Groups learn a song or dance from a past decade and perform it for ward members.","cultural-arts?lang=eng#title32"],
+  ["Arts, Music, and Dance","Music around the world",["intellectual","social"],"Someone shares music and instruments from various cultures and youth try playing them.","cultural-arts?lang=eng#title35"],
+  ["Arts, Music, and Dance","Musical instrument crash course",["intellectual"],"Youth learn the basics of an instrument, practice briefly and perform for each other.","cultural-arts?lang=eng#title38"],
+  ["Arts, Music, and Dance","Photo contest",["intellectual","social"],"After learning photography basics, youth shoot photos on assigned themes and share the best.","cultural-arts?lang=eng#title41"],
+  ["Arts, Music, and Dance","Talent show",["social"],"Youth plan and run a ward or youth talent show featuring individual and group acts.","cultural-arts?lang=eng#title44"],
+  ["Arts, Music, and Dance","Youth choir",["spiritual","social"],"Youth form a choir, rehearse hymns and perform in a Church meeting or devotional.","cultural-arts?lang=eng#title47"]
+].map(([section,title,areas,notes,p])=>({section,title,areas,notes,url:CHURCH_BASE+p}));
 const FSY_IDEAS=[
   {issue:"January 2027",title:"Life skills challenge",areas:["physical","intellectual","spiritual"],notes:"Minute-to-win-it stations run by ward members: sew a button, fold laundry, use tools, jump-start a car, find scriptures, reserve a temple name.",url:FSY_BASE+"2027/01/fsy-lessons/05a-activity-idea?lang=eng"},
   {issue:"January 2027",title:"Jesus Christ, the centre of the plan",areas:["spiritual","social"],notes:"Hide puzzle pieces with clues around the building, with Christ as the centre piece, then talk about the plan of salvation and patriarchal blessings.",url:FSY_BASE+"2027/01/fsy-lessons/05b-activity-idea?lang=eng"},
@@ -796,12 +944,14 @@ function withIdeas(main){
     .sort((x,y)=>String(x[1].title).localeCompare(y[1].title));
   const have=new Set([...state.activities.values()].flatMap(a=>linksOf(a)));
   const fsy=FSY_IDEAS.map((i,n)=>[i,n]).filter(([i])=>!have.has(i.url)&&hit(i.areas));
+  const church=CHURCH_IDEAS.map((i,n)=>[i,n]).filter(([i])=>!have.has(i.url)&&hit(i.areas));
   const item=(drag,i,meta,editId)=>`<div class="sdrag" draggable="true" data-drag="${esc(drag)}">${ideaBlock(i,meta,"",editId)}</div>`;
   return `<div class="calwrap"><div class="calmain">${main}</div><aside class="ideaside panel" aria-label="Ideas">
     <h2>Ideas</h2><p class="hint">Drag an idea onto a future night.</p>
     <div class="sareas">${AREAS.map(([a,l])=>`<button class="abtn a-${a}" type="button" data-act="side-area" data-area="${a}" aria-pressed="${state.sideAreas.has(a)}">${l}</button>`).join("")}</div>
     ${mine.length?mine.map(([id,a])=>item("a:"+id,a,areaPills(a)||"No area yet",id)).join(""):`<p class="hint">No unplanned ideas.</p>`}
     ${fsy.length?`<h2>For the Strength of Youth</h2>${fsy.map(([i,n])=>item("f:"+n,i,(areaPills(i)||"")+" "+esc(i.issue))).join("")}`:""}
+    ${church.length?`<details class="csec"><summary>Youth Activities manual <span class="muted">(${church.length})</span></summary>${church.map(([i,n])=>item("c:"+n,i,areaPills(i)||"")).join("")}</details>`:""}
   </aside></div>`;
 }
 function dropIdea(drag,date,group){
@@ -810,7 +960,7 @@ function dropIdea(drag,date,group){
   if(k==="a"){const a=state.activities.get(v);if(!a)return;
     put("activities",v,{...a,date,group,status:"planned",checks:(a.checks&&a.checks.length)?a.checks:checks,updated:Date.now()});
     toast(`Planned “${a.title}” for ${dateObj(date).toLocaleDateString()}.`);}
-  else if(k==="f"){const i=FSY_IDEAS[+v];if(!i)return;
+  else if(k==="f"||k==="c"){const i=(k==="f"?FSY_IDEAS:CHURCH_IDEAS)[+v];if(!i)return;
     put("activities",newId(),{...unplanned(i.title,i.areas,i.notes,[i.url]),date,group,status:"planned",checks});
     toast(`Planned “${i.title}” for ${dateObj(date).toLocaleDateString()}.`);}
 }
@@ -1164,8 +1314,9 @@ function ideaBlock(i,meta,actions,editId){
     <div class="itext"${editId?` role="button" tabindex="0" data-act="edit" data-id="${esc(editId)}" title="Edit"`:""}><span class="evt">${esc(i.title)}</span><span class="evm">${meta}</span>${i.notes?`<span class="inote">${esc(i.notes)}</span>`:""}</div><div class="iact">${actions}</div></div>`;
 }
 const areaList=i=>orderedAreas(i).map(areaName).join(" · ")||"No area yet";
+const isChurch=i=>[i.url,...(Array.isArray(i.links)?i.links:[])].some(l=>String(l||"").startsWith(CHURCH_BASE));
 const isFsy=i=>[i.url,...(Array.isArray(i.links)?i.links:[])].some(l=>String(l||"").startsWith(FSY_BASE));
-const areaPills=i=>{const ars=orderedAreas(i),fsy=isFsy(i);return ars.length||fsy?`<span class="pills">${fsy?`<span class="pill fsy">FSY</span>`:""}${ars.map(x=>`<span class="pill ${esc(x)}">${esc(areaName(x))}</span>`).join("")}</span>`:"";};
+const areaPills=i=>{const ars=orderedAreas(i),fsy=isFsy(i);return ars.length||fsy||isChurch(i)?`<span class="pills">${fsy?`<span class="pill fsy">FSY</span>`:""}${isChurch(i)?`<span class="pill fsy">Church</span>`:""}${ars.map(x=>`<span class="pill ${esc(x)}">${esc(areaName(x))}</span>`).join("")}</span>`:"";};
 const fmtShort=iso=>{const d=dateObj(iso);return d.toLocaleDateString(undefined,{day:"numeric",month:"short",...(d.getFullYear()!==new Date().getFullYear()?{year:"numeric"}:{})});};
 /** Where an activity is in its life: unplanned (no date), planned, done or cancelled. */
 function lifeOf(a){
@@ -1177,6 +1328,15 @@ function lifeOf(a){
 const linkMeta=a=>{const L=linksOf(a);return L.length===1?` · <a href="${esc(L[0])}" target="_blank" rel="noopener">Link</a>`:L.length?` · ${L.length} links`:"";};
 /** Unplanned bank copies of an FSY idea (planned or done ones stay put). */
 const unplannedCopies=url=>[...state.activities.entries()].filter(([,a])=>!a.date&&linksOf(a).includes(url)).map(([id])=>id);
+function churchSection(){
+  const have=new Set([...state.activities.values()].flatMap(a=>linksOf(a)));
+  const list=CHURCH_IDEAS.map((i,n)=>[i,n]).filter(([i])=>!state.areas.size||i.areas.some(x=>state.areas.has(x)));
+  if(!list.length)return "";
+  const secs=[...new Set(list.map(([i])=>i.section))];
+  return `<section><h2 class="ihead">From the Church's Youth Activities manual</h2>
+    ${secs.map(sec=>{const L=list.filter(([i])=>i.section===sec);return `<details class="csec"><summary>${esc(sec)} <span class="muted">(${L.length})</span></summary><div class="ideagrid">${L.map(([i,n])=>ideaBlock(i,(areaPills(i)||"")+` · <a href="${esc(i.url)}" target="_blank" rel="noopener">Manual</a>`,
+      `<button class="mini" type="button" data-act="plan-church" data-i="${n}">Plan</button>${unplannedCopies(i.url).length?`<button class="mini" type="button" data-act="remove-church" data-i="${n}">Remove</button>`:have.has(i.url)?`<span class="inbank">Planned</span>`:`<button class="mini" type="button" data-act="add-church" data-i="${n}">Add</button>`}`)).join("")}</div></details>`;}).join("")}</section>`;
+}
 function fsySection(){
   const have=new Set([...state.activities.values()].flatMap(a=>linksOf(a)));
   const list=FSY_IDEAS.map((i,n)=>[i,n]).filter(([i])=>!state.areas.size||i.areas.some(x=>state.areas.has(x)));
@@ -1195,11 +1355,11 @@ function renderIdeas(){
   const count=k=>all.filter(([,a])=>lifeOf(a)[0]===k).length;
   let h=`<form class="panel addbar" id="ideaForm"><input id="ideaTitle" maxlength="120" placeholder="Add an idea (no date yet)" autocomplete="off" aria-label="New idea"><div class="areas" id="ideaAreas">${areaChips(state.newIdeaAreas||new Set(),"idea-area")}</div><button class="btn primary" type="submit">Add</button></form>
     <div class="filters"><div class="lay" style="margin-left:0" role="group" aria-label="Show">${BANK_FILTERS.map(([k,l])=>`<button type="button" data-act="bank" data-k="${k}" aria-pressed="${state.bank===k}">${l} (${k==="all"?all.length:count(k)})</button>`).join("")}</div></div>`;
-  if(!all.length)return h+`<div class="panel empty"><h2>No ideas yet</h2><p>Start with ${STARTER_IDEAS.length} suggestions across the four areas, then add your own.</p><button class="btn primary" type="button" data-act="starter">Add starter ideas</button></div>`+fsySection();
-  if(!list.length)return h+`<div class="panel empty"><p>Nothing matches these filters.</p></div>`+fsySection();
+  if(!all.length)return h+`<div class="panel empty"><h2>No ideas yet</h2><p>Start with ${STARTER_IDEAS.length} suggestions across the four areas, then add your own.</p><button class="btn primary" type="button" data-act="starter">Add starter ideas</button></div>`+fsySection()+churchSection();
+  if(!list.length)return h+`<div class="panel empty"><p>Nothing matches these filters.</p></div>`+fsySection()+churchSection();
   return h+`<section><div class="ideagrid">${list.map(([id,a])=>{const[k,label]=lifeOf(a);
     return ideaBlock(a,`<span class="life l-${k}">${esc(label)}</span> ${areaPills(a)||"· No area yet"}${linkMeta(a)}${a.suggestedName?" · Idea from "+esc(a.suggestedName):""}${voteBadge(id)}`,
-      k==="unplanned"?`<button class="mini" type="button" data-act="edit" data-id="${esc(id)}" data-focus="date">Plan</button>`:`<button class="mini" type="button" data-act="plan-again" data-id="${esc(id)}">Plan again</button>`,id);}).join("")}</div></section>`+fsySection();
+      k==="unplanned"?`<button class="mini" type="button" data-act="edit" data-id="${esc(id)}" data-focus="date">Plan</button>`:`<button class="mini" type="button" data-act="plan-again" data-id="${esc(id)}">Plan again</button>`,id);}).join("")}</div></section>`+fsySection()+churchSection();
 }
 
 /* ---------- editor: activities and ideas share one window ---------- */
@@ -1355,6 +1515,9 @@ document.addEventListener("click",e=>{
       put("activities",state.editing.id,null);closeEditor();toast("Activity deleted.");return;}
     case"save-idea":{readEditor();const a=state.editing.a;put("ideas",newId(),{title:a.title,areas:a.areas,notes:a.notes||"",links:a.links||[],created:Date.now()});toast("Saved to the ideas bank.");return;}
     case"plan-idea":{const i=state.ideas.get(b.dataset.id);if(i)openEditor(null,{title:i.title,areas:[...(i.areas||[])],notes:i.notes||"",links:linksOf(i),status:"idea"});return;}
+    case"plan-church":{const i=CHURCH_IDEAS[+b.dataset.i];if(i)openEditor(null,{title:i.title,areas:[...i.areas],notes:i.notes,links:[i.url],status:"idea"});return;}
+    case"remove-church":{const i=CHURCH_IDEAS[+b.dataset.i];if(i){unplannedCopies(i.url).forEach(id=>put("activities",id,null));toast("Removed from your ideas bank.");}return;}
+    case"add-church":{const i=CHURCH_IDEAS[+b.dataset.i];if(i){put("activities",newId(),unplanned(i.title,i.areas,i.notes,[i.url]));toast("Added to your ideas bank.");}return;}
     case"plan-fsy":{const i=FSY_IDEAS[+b.dataset.i];if(i)openEditor(null,{title:i.title,areas:[...i.areas],notes:i.notes,links:[i.url],status:"idea"});return;}
     case"remove-fsy":{const i=FSY_IDEAS[+b.dataset.i];if(i){unplannedCopies(i.url).forEach(id=>put("activities",id,null));toast("Removed from your ideas bank.");}return;}
     case"add-fsy":{const i=FSY_IDEAS[+b.dataset.i];if(i){put("activities",newId(),unplanned(i.title,i.areas,i.notes,[i.url]));toast("Added to your ideas bank.");}return;}
