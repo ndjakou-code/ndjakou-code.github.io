@@ -1154,19 +1154,19 @@ document.addEventListener("keydown",e=>{
 },true);
 document.addEventListener("mousedown",e=>{const o=e.target.closest&&e.target.closest("#planList .popt[data-pi]");if(o){e.preventDefault();planPick(planHits[+o.dataset.pi]);}
   else if($("#planList")&&!e.target.closest("#planPick,#planList"))$("#planList").hidden=true;});
-/* ---------- voting: each young person picks 3 top ideas (2 points each) and 2 more (1 point) ---------- */
+/* ---------- voting: each young person votes for as many unplanned ideas as they like (one vote each) ---------- */
 let voteSaving=false,voteTimer=0;
 const ballot=()=>[...state.activities.entries()].filter(([,a])=>!a.date&&a.status!=="cancelled").sort((x,y)=>String(x[1].title).localeCompare(y[1].title));
 function tallyNow(){
   if(state.youth)return state.tally;
   const t={};
   for(const v of Object.values(state.votes||{})){
-    (v.top||[]).forEach(id=>{const a=state.activities.get(id);if(a&&!a.date){t[id]=t[id]||{p:0,top:0,n:0};t[id].p+=2;t[id].top++;t[id].n++;}});
+    (v.top||[]).forEach(id=>{const a=state.activities.get(id);if(a&&!a.date){t[id]=t[id]||{p:0,top:0,n:0};t[id].p+=1;t[id].top++;t[id].n++;}});
     (v.more||[]).forEach(id=>{const a=state.activities.get(id);if(a&&!a.date){t[id]=t[id]||{p:0,top:0,n:0};t[id].p+=1;t[id].n++;}});
   }
   return t;
 }
-function voteBadge(id){const t=!state.youth&&!state.readOnly&&tallyNow()[id];return t?` · <b class="vpts">★ ${t.p} pt${t.p===1?"":"s"}</b>`:"";}
+function voteBadge(id){const t=!state.youth&&!state.readOnly&&tallyNow()[id];return t?` · <b class="vpts">★ ${t.p} vote${t.p===1?"":"s"}</b>`:"";}
 const youthPeople=()=>state.people.filter(p=>p.id&&p.kind!=="leader");
 function renderVote(){
   return state.youth?renderBallot():renderResults();
@@ -1186,22 +1186,21 @@ function renderBallot(){
   const items=ballot(),t=state.tally;
   const name=id=>{const a=state.activities.get(id);return a?esc(a.title):"";};
   let h=`<div class="panel vhead"><div><h2 class="ihead" style="margin:0">Hi ${esc(me.name)}!</h2>
-      <p class="muted" style="margin:4px 0 0">Pick your <b>top 3</b> ideas, then <b>2 more</b> you'd also enjoy. Change them any time.</p></div>
+      <p class="muted" style="margin:4px 0 0">Vote for every idea you'd enjoy. Tap again to take a vote back.</p></div>
       <button class="linkbtn" type="button" data-act="youth-out">Sign out</button></div>
-    <div class="vsum panel"><span><b>Top 3</b> ${state.myTop.length}/3: ${state.myTop.map(name).join(", ")||"none yet"}</span>
-      <span><b>2 more</b> ${state.myMore.length}/2: ${state.myMore.map(name).join(", ")||"none yet"}</span></div>
+    <div class="vsum panel"><span><b>Your votes</b> (${state.myTop.length}): ${state.myTop.map(name).join(", ")||"none yet"}</span></div>
     <form class="panel addbar" id="suggestForm"><input id="sugTitle" maxlength="120" placeholder="Got an idea? Add it here" autocomplete="off" aria-label="Your idea">
       <div class="areas">${areaChips(state.sugAreas,"sug-area")}</div>
       <input id="sugNotes" maxlength="600" placeholder="What would you do? (optional)" autocomplete="off" aria-label="Details">
       <button class="btn primary" type="submit">Add my idea</button></form>`;
   if(t){
     const ranked=Object.entries(t).filter(([id])=>state.activities.get(id)).sort((x,y)=>y[1].p-x[1].p||y[1].top-x[1].top).slice(0,10);
-    if(ranked.length)h+=`<section class="panel" style="padding:12px 16px"><h2 class="ihead" style="margin-top:0">Results so far</h2><ol class="vrank">${ranked.map(([id,r])=>`<li><span>${name(id)}</span><b>${r.p} pt${r.p===1?"":"s"}</b></li>`).join("")}</ol></section>`;
+    if(ranked.length)h+=`<section class="panel" style="padding:12px 16px"><h2 class="ihead" style="margin-top:0">Results so far</h2><ol class="vrank">${ranked.map(([id,r])=>`<li><span>${name(id)}</span><b>${r.p} vote${r.p===1?"":"s"}</b></li>`).join("")}</ol></section>`;
   }
   if(!items.length)return h+`<div class="panel empty"><p>No ideas to vote on yet. Add one above!</p></div>`;
   return h+`<section><div class="ideagrid">${items.map(([id,a])=>{const top=state.myTop.includes(id),more=state.myMore.includes(id);
     return ideaBlock(a,`${areaPills(a)||"No area yet"}${a.suggestedName?" · Idea from "+esc(a.suggestedName):""}`,
-      `<button class="vbtn${top?" on":""}" type="button" data-act="vote-top" data-id="${esc(id)}" aria-pressed="${top}">★ Top 3</button><button class="vbtn${more?" on":""}" type="button" data-act="vote-more" data-id="${esc(id)}" aria-pressed="${more}">+ 2 more</button>`);}).join("")}</div></section>`;
+      `<button class="vbtn${top?" on":""}" type="button" data-act="vote-top" data-id="${esc(id)}" aria-pressed="${top}">${top?"★ Voted":"☆ Vote"}</button>`);}).join("")}</div></section>`;
 }
 function renderResults(){
   const t=tallyNow(),yp=youthPeople(),votedIds=Object.keys(state.votes||{});
@@ -1211,19 +1210,19 @@ function renderResults(){
   let h=`<div class="panel" style="padding:12px 16px"><h2 class="ihead" style="margin-top:0">Youth vote</h2>`;
   const waiting=state.people.filter(p=>p.waiting),reg=yp.filter(p=>state.registered.includes(p.id)&&!p.waiting);
   const who=p=>esc(nameInitial(p))+`<span class="muted"> · ${esc([p.role,setupOf()==="dual"?p.ward:""].filter(Boolean).join(" · ")||(p.kind==="ym"?"Young Men":"Young Women"))}</span>`;
-  h+=`<p class="muted" style="margin:0 0 8px">Youth open the planner link, tap <b>Enter PIN</b>, then <b>Youth → Register</b> with their first name, surname initial, quorum or class and their own PIN. Approve each sign-up below; then they can vote (top 3 + 2 more) and add ideas, but can't change anything else.</p>`;
+  h+=`<p class="muted" style="margin:0 0 8px">Youth open the planner link, tap <b>Enter PIN</b>, then <b>Youth → Register</b> with their first name, surname initial, quorum or class and their own PIN. Approve each sign-up below; then they can vote for as many ideas as they like and add ideas, but can't change anything else.</p>`;
   h+=waiting.length?`<h3 class="eyebrow">Waiting for approval</h3><ul class="signups">${waiting.map(p=>`<li><span>${who(p)}</span><button class="btn primary" type="button" data-act="approve" data-pid="${esc(p.id)}">Approve</button><button class="btn" type="button" data-act="reject" data-pid="${esc(p.id)}">Remove</button></li>`).join("")}</ul>`:"";
   h+=reg.length?`<details class="signups"><summary>${reg.length} registered youth</summary><ul>${reg.map(p=>`<li><span>${who(p)}</span><button class="mini" type="button" data-act="reset-ypin" data-pid="${esc(p.id)}">Reset PIN</button></li>`).join("")}</ul></details>`:"";
   h+=state.youthPinSet
-    ?`<p class="muted" style="margin:0 0 8px">Youth open the planner link with the <b>youth PIN</b>, pick their name, then choose their top 3 ideas and 2 more. They can also add ideas. They can't change anything else.</p>
+    ?`<p class="muted" style="margin:0 0 8px">Youth open the planner link with the <b>youth PIN</b>, pick their name, then vote for any ideas they like. They can also add ideas. They can't change anything else.</p>
        <p class="muted">A shared youth PIN is still set from before. Youth now use their own PINs, so you can turn it off.</p><button class="btn" type="button" data-act="youth-pin-off">Turn off the shared youth PIN</button>`
     :"";
   h+=`<p class="err" id="youthPinErr" role="alert"></p>
     <div class="filters"><span><b>${voted.length}</b> of ${yp.length} youth have voted</span>
     <button class="btn" type="button" data-act="toggle-showvotes" style="margin-left:auto">${state.meta.showVotes?"Hide results from youth":"Show results to youth"}</button>
     ${votedIds.length?`<button class="btn danger" type="button" data-act="clear-votes">Clear all votes</button>`:""}</div></div>`;
-  h+=ranked.length?`<section class="panel" style="padding:12px 16px"><h2 class="ihead" style="margin-top:0">Favourite ideas</h2><p class="muted" style="margin:0 0 8px">A top-3 pick is 2 points; each of the 2 more is 1 point. Plan an idea and it leaves the vote.</p>
-      <ol class="vrank big">${ranked.map(([id,r])=>{const a=state.activities.get(id);return `<li><div><span class="vt">${esc(a.title)}</span> ${areaPills(a)}<div class="muted vwho">${r.top} top pick${r.top===1?"":"s"} · ${r.n} vote${r.n===1?"":"s"}${pickers(id)?" · "+esc(pickers(id)):""}</div></div><b>${r.p} pt${r.p===1?"":"s"}</b><button class="mini" type="button" data-act="edit" data-id="${esc(id)}" data-focus="date">Plan</button></li>`;}).join("")}</ol></section>`
+  h+=ranked.length?`<section class="panel" style="padding:12px 16px"><h2 class="ihead" style="margin-top:0">Favourite ideas</h2><p class="muted" style="margin:0 0 8px">Each young person can vote for as many ideas as they like. Plan an idea and it leaves the vote.</p>
+      <ol class="vrank big">${ranked.map(([id,r])=>{const a=state.activities.get(id);return `<li><div><span class="vt">${esc(a.title)}</span> ${areaPills(a)}<div class="muted vwho">${pickers(id)?esc(pickers(id)):""}</div></div><b>${r.p} vote${r.p===1?"":"s"}</b><button class="mini" type="button" data-act="edit" data-id="${esc(id)}" data-focus="date">Plan</button></li>`;}).join("")}</ol></section>`
     :`<div class="panel empty"><p>No votes yet.</p></div>`;
   if(yp.length)h+=`<section class="panel" style="padding:12px 16px"><p style="margin:0"><b>Voted:</b> ${voted.map(p=>esc(nameInitial(p))).join(", ")||"nobody yet"}</p><p style="margin:6px 0 0"><b>Not yet:</b> ${notYet.map(p=>esc(nameInitial(p))).join(", ")||"everyone has voted"}</p></section>`;
   return h;
@@ -1485,7 +1484,7 @@ document.addEventListener("click",e=>{
     case"reset-ypin":{const p=state.people.find(x=>x.id===b.dataset.pid);if(!p||!confirm("Let "+p.name+" register again with a new PIN?"))return;
       api("resetYouthPin",[p.id]).then(()=>{state.registered=state.registered.filter(x=>x!==p.id);render();toast(p.name+" can register again.");}).catch(err=>toast(err.message));return;}
     case"not-me":state.me=null;saveMe(null);state.myTop=[];state.myMore=[];render();return;
-    case"vote-top":case"vote-more":{const id=b.dataset.id,top=act==="vote-top",L=top?state.myTop:state.myMore,O=top?state.myMore:state.myTop,max=top?3:2;
+    case"vote-top":case"vote-more":{const id=b.dataset.id,top=act==="vote-top",L=top?state.myTop:state.myMore,O=top?state.myMore:state.myTop,max=top?Infinity:0;
       if(L.includes(id))L.splice(L.indexOf(id),1);
       else{if(L.length>=max){toast(top?"You've picked 3 top ideas. Untick one first.":"You've picked 2 more. Untick one first.");return;}
         if(O.includes(id))O.splice(O.indexOf(id),1);L.push(id);}
