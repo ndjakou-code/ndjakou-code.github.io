@@ -702,7 +702,7 @@ const FSY_IDEAS=[
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const state={whereF:"",youth:false,votes:{},tally:null,voted:0,myTop:[],myMore:[],youthPinSet:false,me:null,sugAreas:new Set(),breakQ:(()=>{try{return localStorage.getItem("youth-activities-breakq")||"quorum";}catch(e){return "quorum";}})(),breakYW:(()=>{try{return localStorage.getItem("youth-activities-breakyw")||"ward";}catch(e){return "ward";}})(),people:[],nights:{},peopleEdit:false,sideAreas:new Set(),hide:(()=>{try{return new Set(JSON.parse(localStorage.getItem("youth-activities-hide")||"[]"));}catch(e){return new Set();}})(),activities:new Map(),ideas:new Map(),meta:{},ready:false,view:"calendar",group:"",when:"all",areas:new Set(),period:"term",bank:"all",editing:null,layout:(()=>{try{return localStorage.getItem("youth-activities-layout")||"grid";}catch(e){return "grid";}})()};
+const state={whereF:"",sugWhere:"",youth:false,votes:{},tally:null,voted:0,myTop:[],myMore:[],youthPinSet:false,me:null,sugAreas:new Set(),breakQ:(()=>{try{return localStorage.getItem("youth-activities-breakq")||"quorum";}catch(e){return "quorum";}})(),breakYW:(()=>{try{return localStorage.getItem("youth-activities-breakyw")||"ward";}catch(e){return "ward";}})(),people:[],nights:{},peopleEdit:false,sideAreas:new Set(),hide:(()=>{try{return new Set(JSON.parse(localStorage.getItem("youth-activities-hide")||"[]"));}catch(e){return new Set();}})(),activities:new Map(),ideas:new Map(),meta:{},ready:false,view:"calendar",group:"",when:"all",areas:new Set(),period:"term",bank:"all",editing:null,layout:(()=>{try{return localStorage.getItem("youth-activities-layout")||"grid";}catch(e){return "grid";}})()};
 let ward=null,pin=null,owner=null,rev=0,pending=[],flushing=false,flushTimer=0,loading=false;
 const PIN_KEY="youth-activities-pin",WARD_KEY="youth-activities-ward";
 
@@ -1191,7 +1191,7 @@ function renderBallot(){
     <div class="vsum panel"><span><b>Your votes</b> (${state.myTop.length}): ${state.myTop.map(name).join(", ")||"none yet"}</span></div>
     <form class="panel addbar" id="suggestForm"><input id="sugTitle" maxlength="120" placeholder="Got an idea? Add it here" autocomplete="off" aria-label="Your idea">
       <div class="areas">${areaChips(state.sugAreas,"sug-area")}</div>
-      <input id="sugNotes" maxlength="600" placeholder="What would you do? (optional)" autocomplete="off" aria-label="Details">
+      <div class="lay" style="margin-left:0" role="group" aria-label="Inside or outside">${Object.entries(WHERE_NAMES).map(([k,l])=>`<button type="button" data-act="sug-where" data-k="${k}" aria-pressed="${state.sugWhere===k}">${l}</button>`).join("")}</div>
       <button class="btn primary" type="submit">Add my idea</button></form>`;
   if(t){
     const ranked=Object.entries(t).filter(([id])=>state.activities.get(id)).sort((x,y)=>y[1].p-x[1].p||y[1].top-x[1].top).slice(0,10);
@@ -1489,7 +1489,8 @@ document.addEventListener("click",e=>{
       else{if(L.length>=max){toast(top?"You've picked 3 top ideas. Untick one first.":"You've picked 2 more. Untick one first.");return;}
         if(O.includes(id))O.splice(O.indexOf(id),1);L.push(id);}
       render();saveVotes();return;}
-    case"sug-area":{const a=b.dataset.area;state.sugAreas.has(a)?state.sugAreas.delete(a):state.sugAreas.add(a);const t=$("#sugTitle").value,n=$("#sugNotes").value;render();$("#sugTitle").value=t;$("#sugNotes").value=n;return;}
+    case"sug-area":{const a=b.dataset.area;state.sugAreas.has(a)?state.sugAreas.delete(a):state.sugAreas.add(a);const t=$("#sugTitle").value;render();$("#sugTitle").value=t;return;}
+    case"sug-where":{state.sugWhere=state.sugWhere===b.dataset.k?"":b.dataset.k;const t=$("#sugTitle").value;render();$("#sugTitle").value=t;return;}
     case"toggle-showvotes":state.meta={...state.meta,showVotes:!state.meta.showVotes};put("meta","ward",{...state.meta});return;
     case"clear-votes":if(!confirm("Clear every youth's votes? This can't be undone."))return;
       for(const id of Object.keys(state.votes))pending.push({col:"votes",id,body:null});state.votes={};clearTimeout(flushTimer);flushTimer=setTimeout(flush,100);render();toast("Votes cleared.");return;
@@ -1589,8 +1590,8 @@ document.addEventListener("submit",e=>{
   if(e.target.id==="suggestForm"){
     e.preventDefault();const t=$("#sugTitle").value.trim();if(t.length<3){toast("Give your idea a name.");return;}
     const btn=e.target.querySelector("button[type=submit]");btn.disabled=true;
-    api("suggest",[t,[...state.sugAreas],$("#sugNotes").value.trim()])
-      .then(r=>{state.sugAreas=new Set();toast("Thanks! Your idea is in.");return loadAll();})
+    api("suggest",[t,[...state.sugAreas],"",state.sugWhere])
+      .then(r=>{state.sugAreas=new Set();state.sugWhere="";toast("Thanks! Your idea is in.");return loadAll();})
       .catch(err=>toast(err.message||"Couldn't add your idea."))
       .finally(()=>{btn.disabled=false;});
     return;
