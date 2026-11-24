@@ -1156,13 +1156,34 @@ document.addEventListener("mousedown",e=>{const o=e.target.closest&&e.target.clo
   else if($("#planList")&&!e.target.closest("#planPick,#planList"))$("#planList").hidden=true;});
 /* ---------- voting: each young person votes for as many unplanned ideas as they like (one vote each) ---------- */
 let voteSaving=false,voteTimer=0;
+/** Built-in ideas are voted on as "x:<page path>"; once one is in the ward's bank, its votes count for that copy. */
+const xKey=url=>"x:"+String(url).replace("https://www.churchofjesuschrist.org/study/","").replace("?lang=eng","");
+let builtinMap=null;
+const builtins=()=>builtinMap||(builtinMap=new Map([...FSY_IDEAS.map(i=>[xKey(i.url),{...i,src:"fsy"}]),...CHURCH_IDEAS.map(i=>[xKey(i.url),{...i,src:"church"}])]));
+const ideaOf=id=>state.activities.get(id)||builtins().get(id);
+function resolveVote(id){
+  if(!String(id).startsWith("x:")){const a=state.activities.get(id);return a&&!a.date?id:null;}
+  const i=builtins().get(id);if(!i)return null;
+  for(const[aid,a]of state.activities)if(linksOf(a).includes(i.url))return a.date?null:aid;
+  return id;
+}
+/** Sum a raw tally (by voted id) onto what each vote counts for now. */
+function mergeTally(raw){
+  const t={};
+  for(const[id,r]of Object.entries(raw||{})){const k=resolveVote(id);if(!k)continue;t[k]=t[k]||{p:0,top:0,n:0};t[k].p+=r.p;t[k].top+=r.top;t[k].n+=r.n;}
+  return t;
+}
 const ballot=()=>[...state.activities.entries()].filter(([,a])=>!a.date&&a.status!=="cancelled").sort((x,y)=>String(x[1].title).localeCompare(y[1].title));
+function builtinBallot(){
+  const have=new Set([...state.activities.values()].flatMap(a=>linksOf(a)));
+  return [...builtins()].filter(([,i])=>!have.has(i.url));
+}
 function tallyNow(){
-  if(state.youth)return state.tally;
+  if(state.youth)return state.tally&&mergeTally(state.tally);
   const t={};
   for(const v of Object.values(state.votes||{})){
-    (v.top||[]).forEach(id=>{const a=state.activities.get(id);if(a&&!a.date){t[id]=t[id]||{p:0,top:0,n:0};t[id].p+=1;t[id].top++;t[id].n++;}});
-    (v.more||[]).forEach(id=>{const a=state.activities.get(id);if(a&&!a.date){t[id]=t[id]||{p:0,top:0,n:0};t[id].p+=1;t[id].n++;}});
+    const mine=new Set([...(v.top||[]),...(v.more||[])].map(resolveVote).filter(Boolean));   // one vote per idea per person
+    mine.forEach(id=>{t[id]=t[id]||{p:0,top:0,n:0};t[id].p+=1;t[id].top++;t[id].n++;});
   }
   return t;
 }
@@ -1183,8 +1204,9 @@ function renderBallot(){
       ${yp.some(p=>p.kind==="yw")?`<h3 class="eyebrow">Young Women</h3><div class="whogrid">${grp("yw")}</div>`:""}
       ${yp.some(p=>p.kind==="ym")?`<h3 class="eyebrow">Young Men</h3><div class="whogrid">${grp("ym")}</div>`:""}</div>`;
   }
-  const items=ballot(),t=state.tally;
-  const name=id=>{const a=state.activities.get(id);return a?esc(a.title):"";};
+  const okF=i=>(!state.areas.size||(i.areas||[]).some(x=>state.areas.has(x)))&&passF(i);
+  const items=ballot().filter(([,a])=>okF(a)),built=builtinBallot().filter(([,i])=>okF(i)),t=tallyNow();
+  const name=id=>{const a=ideaOf(id);return a?esc(a.title):"";};
   let h=`<div class="panel vhead"><div><h2 class="ihead" style="margin:0">Hi ${esc(me.name)}!</h2>
       <p class="muted" style="margin:4px 0 0">Vote for every idea you'd enjoy. Tap again to take a vote back.</p></div>
       <button class="linkbtn" type="button" data-act="youth-out">Sign out</button></div>
@@ -1194,19 +1216,28 @@ function renderBallot(){
       <div class="lay" style="margin-left:0" role="group" aria-label="Inside or outside">${Object.entries(WHERE_NAMES).map(([k,l])=>`<button type="button" data-act="sug-where" data-k="${k}" aria-pressed="${state.sugWhere===k}">${l}</button>`).join("")}</div>
       <button class="btn primary" type="submit">Add my idea</button></form>`;
   if(t){
-    const ranked=Object.entries(t).filter(([id])=>state.activities.get(id)).sort((x,y)=>y[1].p-x[1].p||y[1].top-x[1].top).slice(0,10);
+    const ranked=Object.entries(t).filter(([id])=>ideaOf(id)).sort((x,y)=>y[1].p-x[1].p||y[1].top-x[1].top).slice(0,10);
     if(ranked.length)h+=`<section class="panel" style="padding:12px 16px"><h2 class="ihead" style="margin-top:0">Results so far</h2><ol class="vrank">${ranked.map(([id,r])=>`<li><span>${name(id)}</span><b>${r.p} vote${r.p===1?"":"s"}</b></li>`).join("")}</ol></section>`;
   }
-  if(!items.length)return h+`<div class="panel empty"><p>No ideas to vote on yet. Add one above!</p></div>`;
-  return h+`<section><div class="ideagrid">${items.map(([id,a])=>{const top=state.myTop.includes(id),more=state.myMore.includes(id);
-    return ideaBlock(a,`${areaPills(a)||"No area yet"}${a.suggestedName?" · Idea from "+esc(a.suggestedName):""}`,
-      `<button class="vbtn${top?" on":""}" type="button" data-act="vote-top" data-id="${esc(id)}" aria-pressed="${top}">${top?"★ Voted":"☆ Vote"}</button>`);}).join("")}</div></section>`;
+  const vbtn=id=>{const on=state.myTop.includes(id);return `<button class="vbtn${on?" on":""}" type="button" data-act="vote-top" data-id="${esc(id)}" aria-pressed="${on}">${on?"★ Voted":"☆ Vote"}</button>`;};
+  const block=(id,a)=>ideaBlock(a,`${areaPills(a)||"No area yet"}${a.suggestedName?" · Idea from "+esc(a.suggestedName):""}${a.issue?" · "+esc(a.issue):""}`,vbtn(id));
+  h+=`<div class="filters">${whereFilters()}</div>`;
+  h+=items.length?`<section><h2 class="ihead">Ideas from your ward</h2><div class="ideagrid">${items.map(([id,a])=>block(id,a)).join("")}</div></section>`:"";
+  const fsy=built.filter(([,i])=>i.src==="fsy"),church=built.filter(([,i])=>i.src==="church");
+  h+=fsy.length?`<section><h2 class="ihead">From For the Strength of Youth</h2><div class="ideagrid">${fsy.map(([id,i])=>block(id,i)).join("")}</div></section>`:"";
+  if(church.length){
+    const secs=[...new Set(church.map(([,i])=>i.section))];
+    h+=`<section><h2 class="ihead">From the Church's Youth Activities manual</h2>${secs.map(sec=>{const L=church.filter(([,i])=>i.section===sec);const n=L.filter(([id])=>state.myTop.includes(id)).length;
+      return `<details class="csec"><summary>${esc(sec)} <span class="muted">(${L.length}${n?`, ${n} voted`:""})</span></summary><div class="ideagrid">${L.map(([id,i])=>block(id,i)).join("")}</div></details>`;}).join("")}</section>`;
+  }
+  if(!items.length&&!built.length)h+=`<div class="panel empty"><p>Nothing matches these filters.</p></div>`;
+  return h;
 }
 function renderResults(){
   const t=tallyNow(),yp=youthPeople(),votedIds=Object.keys(state.votes||{});
   const voted=yp.filter(p=>votedIds.includes(p.id)),notYet=yp.filter(p=>!votedIds.includes(p.id));
-  const ranked=Object.entries(t).filter(([id])=>state.activities.get(id)).sort((x,y)=>y[1].p-x[1].p||y[1].top-x[1].top);
-  const pickers=id=>yp.filter(p=>{const v=state.votes[p.id]||{};return (v.top||[]).includes(id)||(v.more||[]).includes(id);}).map(nameInitial).join(", ");
+  const ranked=Object.entries(t).filter(([id])=>ideaOf(id)).sort((x,y)=>y[1].p-x[1].p||y[1].top-x[1].top);
+  const pickers=id=>yp.filter(p=>{const v=state.votes[p.id]||{};return [...(v.top||[]),...(v.more||[])].some(x=>resolveVote(x)===id);}).map(nameInitial).join(", ");
   let h=`<div class="panel" style="padding:12px 16px"><h2 class="ihead" style="margin-top:0">Youth vote</h2>`;
   const waiting=state.people.filter(p=>p.waiting),reg=yp.filter(p=>state.registered.includes(p.id)&&!p.waiting);
   const who=p=>esc(nameInitial(p))+`<span class="muted"> · ${esc([p.role,setupOf()==="dual"?p.ward:""].filter(Boolean).join(" · ")||(p.kind==="ym"?"Young Men":"Young Women"))}</span>`;
@@ -1221,8 +1252,8 @@ function renderResults(){
     <div class="filters"><span><b>${voted.length}</b> of ${yp.length} youth have voted</span>
     <button class="btn" type="button" data-act="toggle-showvotes" style="margin-left:auto">${state.meta.showVotes?"Hide results from youth":"Show results to youth"}</button>
     ${votedIds.length?`<button class="btn danger" type="button" data-act="clear-votes">Clear all votes</button>`:""}</div></div>`;
-  h+=ranked.length?`<section class="panel" style="padding:12px 16px"><h2 class="ihead" style="margin-top:0">Favourite ideas</h2><p class="muted" style="margin:0 0 8px">Each young person can vote for as many ideas as they like. Plan an idea and it leaves the vote.</p>
-      <ol class="vrank big">${ranked.map(([id,r])=>{const a=state.activities.get(id);return `<li><div><span class="vt">${esc(a.title)}</span> ${areaPills(a)}<div class="muted vwho">${pickers(id)?esc(pickers(id)):""}</div></div><b>${r.p} vote${r.p===1?"":"s"}</b><button class="mini" type="button" data-act="edit" data-id="${esc(id)}" data-focus="date">Plan</button></li>`;}).join("")}</ol></section>`
+  h+=ranked.length?`<section class="panel" style="padding:12px 16px"><h2 class="ihead" style="margin-top:0">Favourite ideas</h2><p class="muted" style="margin:0 0 8px">Youth can vote on any idea: your ward's, FSY and the Church manual. Plan an idea and it leaves the vote.</p>
+      <ol class="vrank big">${ranked.map(([id,r])=>{const a=ideaOf(id),bi=!state.activities.get(id);return `<li><div><span class="vt">${esc(a.title)}</span> ${areaPills(a)}<div class="muted vwho">${pickers(id)?esc(pickers(id)):""}</div></div><b>${r.p} vote${r.p===1?"":"s"}</b>${bi?`<button class="mini" type="button" data-act="plan-x" data-k="${esc(id)}">Plan</button>`:`<button class="mini" type="button" data-act="edit" data-id="${esc(id)}" data-focus="date">Plan</button>`}</li>`;}).join("")}</ol></section>`
     :`<div class="panel empty"><p>No votes yet.</p></div>`;
   if(yp.length)h+=`<section class="panel" style="padding:12px 16px"><p style="margin:0"><b>Voted:</b> ${voted.map(p=>esc(nameInitial(p))).join(", ")||"nobody yet"}</p><p style="margin:6px 0 0"><b>Not yet:</b> ${notYet.map(p=>esc(nameInitial(p))).join(", ")||"everyone has voted"}</p></section>`;
   return h;
@@ -1342,7 +1373,7 @@ function churchSection(){
   if(!list.length)return "";
   const secs=[...new Set(list.map(([i])=>i.section))];
   return `<section><h2 class="ihead">From the Church's Youth Activities manual</h2>
-    ${secs.map(sec=>{const L=list.filter(([i])=>i.section===sec);return `<details class="csec"><summary>${esc(sec)} <span class="muted">(${L.length})</span></summary><div class="ideagrid">${L.map(([i,n])=>ideaBlock(i,(areaPills(i)||"")+` · <a href="${esc(i.url)}" target="_blank" rel="noopener">Manual</a>`,
+    ${secs.map(sec=>{const L=list.filter(([i])=>i.section===sec);return `<details class="csec"><summary>${esc(sec)} <span class="muted">(${L.length})</span></summary><div class="ideagrid">${L.map(([i,n])=>ideaBlock(i,(areaPills(i)||"")+` · <a href="${esc(i.url)}" target="_blank" rel="noopener">Manual</a>`+voteBadge(xKey(i.url)),
       `<button class="mini" type="button" data-act="plan-church" data-i="${n}">Plan</button>${unplannedCopies(i.url).length?`<button class="mini" type="button" data-act="remove-church" data-i="${n}">Remove</button>`:have.has(i.url)?`<span class="inbank">Planned</span>`:`<button class="mini" type="button" data-act="add-church" data-i="${n}">Add</button>`}`)).join("")}</div></details>`;}).join("")}</section>`;
 }
 /** Inside/outside filter, shared by the Ideas tab and the drag panel. */
@@ -1355,7 +1386,7 @@ function fsySection(){
   const list=FSY_IDEAS.map((i,n)=>[i,n]).filter(([i])=>(!state.areas.size||i.areas.some(x=>state.areas.has(x)))&&passF(i));
   if(!list.length)return "";
   return `<section><h2 class="ihead">From For the Strength of Youth</h2>
-    <div class="ideagrid">${list.map(([i,n])=>ideaBlock(i,(areaPills(i)||"No area yet · ")+esc(i.issue)+` · <a href="${esc(i.url)}" target="_blank" rel="noopener">Article</a>`,
+    <div class="ideagrid">${list.map(([i,n])=>ideaBlock(i,(areaPills(i)||"No area yet · ")+esc(i.issue)+` · <a href="${esc(i.url)}" target="_blank" rel="noopener">Article</a>`+voteBadge(xKey(i.url)),
       `<button class="mini" type="button" data-act="plan-fsy" data-i="${n}">Plan</button>${unplannedCopies(i.url).length?`<button class="mini" type="button" data-act="remove-fsy" data-i="${n}">Remove</button>`:have.has(i.url)?`<span class="inbank">Planned</span>`:`<button class="mini" type="button" data-act="add-fsy" data-i="${n}">Add</button>`}`)).join("")}</div></section>`;
 }
 const BANK_FILTERS=[["all","All"],["unplanned","Unplanned"],["planned","Planned"],["done","Done"]];
@@ -1531,6 +1562,7 @@ document.addEventListener("click",e=>{
       put("activities",state.editing.id,null);closeEditor();toast("Activity deleted.");return;}
     case"save-idea":{readEditor();const a=state.editing.a;put("ideas",newId(),{title:a.title,areas:a.areas,notes:a.notes||"",links:a.links||[],created:Date.now()});toast("Saved to the ideas bank.");return;}
     case"plan-idea":{const i=state.ideas.get(b.dataset.id);if(i)openEditor(null,{title:i.title,areas:[...(i.areas||[])],notes:i.notes||"",links:linksOf(i),status:"idea"});return;}
+    case"plan-x":{const i=builtins().get(b.dataset.k);if(i)openEditor(null,{title:i.title,areas:[...i.areas],notes:i.notes,links:[i.url],status:"idea",where:i.where});return;}
     case"plan-church":{const i=CHURCH_IDEAS[+b.dataset.i];if(i)openEditor(null,{title:i.title,areas:[...i.areas],notes:i.notes,links:[i.url],status:"idea",where:i.where});return;}
     case"remove-church":{const i=CHURCH_IDEAS[+b.dataset.i];if(i){unplannedCopies(i.url).forEach(id=>put("activities",id,null));toast("Removed from your ideas bank.");}return;}
     case"add-church":{const i=CHURCH_IDEAS[+b.dataset.i];if(i){put("activities",newId(),unplanned(i.title,i.areas,i.notes,[i.url],i.where));toast("Added to your ideas bank.");}return;}
