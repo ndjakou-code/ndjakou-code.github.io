@@ -146,6 +146,7 @@ td.emp.over{outline:2px dashed var(--accent)!important;outline-offset:-4px;backg
 .ptable th{text-align:left;font-size:0.75rem;color:var(--muted);font-weight:600;padding:4px}
 .ptable td{padding:3px 4px}
 .ptable input,.ptable select{width:100%;box-sizing:border-box;font:inherit;padding:5px 7px;border:1px solid var(--line-2);border-radius:6px;background:var(--surface);color:var(--ink)}
+#defView{font:inherit;padding:6px 8px;border:1px solid var(--line-2);border-radius:6px;background:var(--surface);color:var(--ink)}
 #setupSel{font:inherit;padding:6px 8px;border:1px solid var(--line-2);border-radius:6px;background:var(--surface);color:var(--ink)}
 .dualnames{display:flex;gap:10px;margin-top:8px}.dualnames label{display:flex;flex-direction:column;gap:3px;font-size:0.7813rem;color:var(--muted);flex:1}
 .dualnames input{font:inherit;padding:6px 8px;border:1px solid var(--line-2);border-radius:6px;background:var(--surface);color:var(--ink)}
@@ -418,6 +419,12 @@ html,body{overflow-x:clip}
           <label>Ward 2 short name<input id="ward2" maxlength="12" placeholder="e.g. CM2"></label>
         </div>
         <div class="formbtns" style="margin-top:8px"><button class="btn" type="button" data-act="save-setup">Save setup</button></div>
+      </div>
+      <div id="viewSec">
+        <h3 class="eyebrow">Default calendar view</h3>
+        <p class="muted">What people see when they first open the calendar. Everyone can still switch with the Quorums / Young Women buttons.</p>
+        <select id="defView" aria-label="Default calendar view"><option value="">Quorums and Young Women</option><option value="yw">Quorums only</option><option value="q">Young Women only</option></select>
+        <div class="formbtns" style="margin-top:8px"><button class="btn" type="button" data-act="save-defview">Save default view</button></div>
       </div>
       <div id="colourSec">
         <h3 class="eyebrow">Area colours</h3>
@@ -807,6 +814,7 @@ function moveIdeasToActivities(){
     put("ideas",id,null);
   }
 }
+let hideLoaded=false;
 async function loadAll(){
   loading=true;
   try{
@@ -820,6 +828,8 @@ async function loadAll(){
     state.votes=all.votes||{};state.youthPinSet=!!all.youthPin;state.registered=all.registered||[];state.meInfo=all.me||null;
     if(state.youth){state.tally=all.tally||null;state.voted=all.voted||0;
       if(!voteSaving){const v=all.myVotes||{};state.myTop=v.top||[];state.myMore=v.more||[];}}
+    if(!hideLoaded){hideLoaded=true;let saved=null;try{saved=localStorage.getItem("youth-activities-hide:"+ward);}catch(e){}
+      state.hide=new Set(saved?JSON.parse(saved):(state.meta.defaultHide||[]));}
     rev=all.rev||0;state.ready=true;
     render();
     if(!state.readOnly){moveIdeasToActivities();addYoungWomenClasses();capitaliseQuorums();givePeopleIds();markPastDone();}
@@ -1535,7 +1545,7 @@ document.addEventListener("click",e=>{
       if(!b.classList.contains("armed")){b.classList.add("armed");const t=b.textContent;b.textContent="Confirm";setTimeout(()=>{if(b.isConnected){b.classList.remove("armed");b.textContent=t;}},3500);return;}
       undo(+b.dataset.n,act==="undo-from"?"from":"one");return;}
     case"show-past":state.when="past";render();return;
-    case"show-all":state.group="";state.areas.clear();state.hide.clear();state.when="all";try{localStorage.setItem("youth-activities-hide","[]");}catch(err){}render();return;
+    case"show-all":state.group="";state.areas.clear();state.hide.clear();state.when="all";try{localStorage.setItem("youth-activities-hide:"+ward,"[]");}catch(err){}render();return;
     case"plan-del":{const t=planTokens($("#fPlan").value);t.splice(+b.dataset.i,1);planSet(t);return;}
     case"pick-me":state.me=b.dataset.pid;saveMe(state.me);state.myTop=[];state.myMore=[];render();loadAll().catch(()=>{});return;
     case"youth-out":savePin(null);saveRole(null);saveMe(null);location.reload();return;
@@ -1570,7 +1580,7 @@ document.addEventListener("click",e=>{
       else{state.breakYW=k;try{localStorage.setItem("youth-activities-breakyw",k);}catch(err){}}render();return;}
     case"side":{const k=b.dataset.side,o=k==="q"?"yw":"q";
       if(state.hide.has(k))state.hide.delete(k);else{state.hide.add(k);state.hide.delete(o);}   // never hide both
-      try{localStorage.setItem("youth-activities-hide",JSON.stringify([...state.hide]));}catch(err){}render();return;}
+      try{localStorage.setItem("youth-activities-hide:"+ward,JSON.stringify([...state.hide]));}catch(err){}render();return;}
     case"layout":state.layout=b.dataset.layout;try{localStorage.setItem("youth-activities-layout",state.layout);}catch(err){}render();return;
     case"new-at":openEditor(null,{date:b.dataset.date,group:b.dataset.group});return;
     case"new":openEditor(null);return;
@@ -1610,9 +1620,10 @@ document.addEventListener("click",e=>{
       if(!b.classList.contains("armed")){b.classList.add("armed");b.textContent="Confirm";setTimeout(()=>{if(b.isConnected){b.classList.remove("armed");b.textContent="Remove";}},3500);return;}
       put("ideas",b.dataset.id,null);return;}
     case"starter":STARTER_IDEAS.forEach(([title,areas])=>put("activities",newId(),unplanned(title,areas,"",[])));toast(STARTER_IDEAS.length+" ideas added.");return;
-    case"settings":drawColourPick();$("#colourSec").hidden=!!state.readOnly;$("#setupSel").value=setupOf();$("#ward1").value=wardNames()[0];$("#ward2").value=wardNames()[1];$("#dualNames").hidden=setupOf()!=="dual";["setupSec","groupsSec","pinForm","histSec","forgetSec"].forEach(x=>$("#"+x).hidden=!!state.readOnly);$("#roSec").hidden=!state.readOnly;$("#wardLink").value=wardLink();$("#groupsText").value=groups().join("\n");$("#setModal").hidden=false;return;
+    case"settings":drawColourPick();$("#defView").value=(state.meta.defaultHide||[])[0]||"";$("#viewSec").hidden=!!state.readOnly;$("#colourSec").hidden=!!state.readOnly;$("#setupSel").value=setupOf();$("#ward1").value=wardNames()[0];$("#ward2").value=wardNames()[1];$("#dualNames").hidden=setupOf()!=="dual";["setupSec","groupsSec","pinForm","histSec","forgetSec"].forEach(x=>$("#"+x).hidden=!!state.readOnly);$("#roSec").hidden=!state.readOnly;$("#wardLink").value=wardLink();$("#groupsText").value=groups().join("\n");$("#setModal").hidden=false;return;
     case"close-settings":$("#setModal").hidden=true;applyColours();return;
     case"copy-link":copyText(wardLink(),$("#wardLink"));return;
+    case"save-defview":{const v=$("#defView").value;state.meta={...state.meta,defaultHide:v?[v]:[]};put("meta","ward",{...state.meta});toast("Default view saved.");return;}
     case"save-colours":{const c={};document.querySelectorAll("[data-colour]").forEach(i=>c[i.dataset.colour]=i.value);
       state.meta={...state.meta,colours:c};put("meta","ward",{...state.meta});toast("Colours saved.");return;}
     case"reset-colours":{const m={...state.meta};delete m.colours;state.meta=m;put("meta","ward",{...m});applyColours();drawColourPick();toast("Standard colours back.");return;}
